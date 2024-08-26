@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "928936467721",
+    "project_id": "superm-492d3",
+    "storage_bucket": "superm-492d3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:928936467721:android:167ebbf828b5d4d2dfc7d8",
+        "android_client_info": {
+          "package_name": "com.example.my_first_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPtx1gJGYqusAecZdVbDKHEMvx4UOB320"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
