@@ -8,22 +8,24 @@ void main() {
 }
 
 class CleaningPage extends StatelessWidget {
+  const CleaningPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
-        leading: Icon(Icons.menu, color: Colors.white),
-        title: Text('Green Mart', style: TextStyle(color: Colors.white)),
+        leading: const Icon(Icons.menu, color: Colors.white),
+        title: const Text('Green Mart', style: TextStyle(color: Colors.white)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
             child: Center(
               child: Text('Rs.900.00', style: TextStyle(color: Colors.white)),
             ),
           ),
           IconButton(
-            icon: Icon(Icons.shopping_cart, color: Colors.white),
+            icon: const Icon(Icons.shopping_cart, color: Colors.white),
             onPressed: () {},
           ),
         ],
@@ -31,8 +33,8 @@ class CleaningPage extends StatelessWidget {
       body: Column(
         children: [
           // Search bar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          const Padding(
+            padding: EdgeInsets.all(8.0),
             child: TextField(
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
@@ -83,8 +85,8 @@ class CleaningPage extends StatelessWidget {
           Container(
             color: Colors.yellow,
             width: double.infinity,
-            padding: EdgeInsets.all(16.0),
-            child: Text(
+            padding: const EdgeInsets.all(16.0),
+            child: const Text(
               '15% Deals\nNow Rs 320.00, was Rs.400.00',
               style: TextStyle(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
@@ -100,7 +102,7 @@ class CategoryButton extends StatelessWidget {
   final String text;
   final bool selected;
 
-  CategoryButton({required this.text, this.selected = false});
+  const CategoryButton({super.key, required this.text, this.selected = false});
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +112,7 @@ class CategoryButton extends StatelessWidget {
         backgroundColor: selected ? Colors.green : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20.0),
-          side: BorderSide(color: Colors.green),
+          side: const BorderSide(color: Colors.green),
         ),
       ),
       onPressed: () {},
@@ -124,7 +126,7 @@ class ProductItem extends StatelessWidget {
   final String name;
   final String price;
 
-  ProductItem({
+  const ProductItem({super.key, 
     required this.imageUrl,
     required this.name,
     required this.price,
@@ -137,22 +139,22 @@ class ProductItem extends StatelessWidget {
       child: Row(
         children: [
           Image.asset(imageUrl, width: 100, height: 150), // Use Image.asset for local images
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Text(name),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(price, style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
               Row(
                 children: [
                   IconButton(
-                    icon: Icon(FontAwesomeIcons.minusCircle, color: Colors.green),
+                    icon: const Icon(FontAwesomeIcons.minusCircle, color: Colors.green),
                     onPressed: () {},
                   ),
                   IconButton(
-                    icon: Icon(FontAwesomeIcons.plusCircle, color: Colors.green),
+                    icon: const Icon(FontAwesomeIcons.plusCircle, color: Colors.green),
                     onPressed: () {},
                   ),
                 ],

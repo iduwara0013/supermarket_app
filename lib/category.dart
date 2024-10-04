@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'shopping_cart.dart'; // Import the ShoppingCartPage
 import 'setting.dart'; // Import the SettingsPage
 import 'homescreen.dart';
+import 'beverage.dart'; // Import your Beverage screen
+import 'order.dart';
 
 class CategoryPage extends StatefulWidget {
+  const CategoryPage({super.key});
+
   @override
   _CategoryPageState createState() => _CategoryPageState();
 }
@@ -11,17 +15,16 @@ class CategoryPage extends StatefulWidget {
 class _CategoryPageState extends State<CategoryPage> {
   int _selectedIndex = 2; // Default index for Categories tab
 
-  final List<String> categories = [
-    'Vegetables',
-    'Fruits',
-    'Meat',
-    'Fish',
-    'Bakery',
-    'Beverages',
-    'Chilled',
-    'Frozen Food',
-    'Grocery',
-    'Hampers & Vouchers',
+  // Add the list of categories with corresponding image assets, labels, and custom properties
+  final List<Map<String, dynamic>> categories = [
+    {'label': 'Dairy & Eggs', 'image': 'assets/dairy1.png', 'color': Color(0xFFFFE9E5), 'imageSize': 120.0},
+    {'label': 'Meats & Seafood', 'image': 'assets/meats1.png', 'color': Color(0xFFDCF4F5), 'imageSize': 60.0},
+    {'label': 'Grocery', 'image': 'assets/grocery1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 80.0},
+    {'label': 'Bakery Products', 'image': 'assets/bakery1.png', 'color': Color(0xFFEFE5FF), 'imageSize': 65.0},
+    {'label': 'Snacks', 'image': 'assets/snacks1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 20.0},
+    {'label': 'Beverages', 'image': 'assets/beverages1.png', 'color': Color(0xFFE6F3EA), 'imageSize': 55.0},
+    {'label': 'Health & Wellness', 'image': 'assets/health1.png', 'color': Color(0xFFE6F3EA), 'imageSize': 80.0},
+    {'label': 'Frozen Foods', 'image': 'assets/frozen1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 70.0},
   ];
 
   void _onItemTapped(int index) {
@@ -42,7 +45,7 @@ class _CategoryPageState extends State<CategoryPage> {
     } else if (index == 1) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+        MaterialPageRoute(builder: (context) => OrderScreen()),
       );
     }
   }
@@ -51,31 +54,68 @@ class _CategoryPageState extends State<CategoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Categories',
-          style: TextStyle(color: Colors.green),
+          style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.green,
         centerTitle: true,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.green),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: ListView.separated(
-        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-        itemCount: categories.length,
-        separatorBuilder: (BuildContext context, int index) => Divider(),
-        itemBuilder: (BuildContext context, int index) {
-          return ListTile(
-            title: Text(
-              categories[index],
-              style: TextStyle(fontSize: 18),
-            ),
-            trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey),
-            onTap: () {
-              // Add navigation or logic for each category here
-            },
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          itemCount: categories.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, // Three items per row
+            crossAxisSpacing: 16.0,
+            mainAxisSpacing: 16.0,
+            childAspectRatio: 1, // Adjust the aspect ratio for item width/height ratio
+          ),
+          itemBuilder: (BuildContext context, int index) {
+            return GestureDetector(
+              onTap: () {
+                // Navigate to Beverage screen if the selected category is Beverages
+                if (categories[index]['label'] == 'Beverages') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => BeverageScreen()), // Navigate to your Beverage screen
+                  );
+                }
+              },
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: 110.0,  // Adjust the overall size of the circle container
+                      height: 110.0, // Adjust the overall size of the circle container
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: categories[index]['color'], // Custom background color per item
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0), // Adjust padding inside the circle
+                        child: Image.asset(
+                          categories[index]['image']!,
+                          width: categories[index]['imageSize'], // Custom image width per item
+                          height: categories[index]['imageSize'], // Custom image height per item
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    categories[index]['label']!,
+                    style: const TextStyle(fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
       bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
@@ -91,10 +131,10 @@ class BottomNavBar extends StatelessWidget {
   final Function(int) onItemTapped;
 
   const BottomNavBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

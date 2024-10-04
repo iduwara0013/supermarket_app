@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'forget_password.dart'; // Ensure the path is correct
-import 'homescreen.dart'; // Ensure this is the correct path to your HomeScreen file
+import 'forget_password.dart';
+import 'signup_screen.dart'; // Ensure this is the correct path to your SignUpScreen file
+import 'homescreen.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -13,26 +16,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _passwordVisible = false;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Authentication instance
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   void _login() async {
     final String email = _usernameController.text.trim();
     final String password = _passwordController.text.trim();
 
     try {
-      // Sign in using Firebase Authentication
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // If sign-in is successful, navigate to the HomeScreen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     } catch (e) {
-      // Handle any errors that occur during the sign-in process
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error logging in: ${e.toString()}'),
@@ -44,66 +44,70 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Log In'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 30.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch, // Ensures the button takes full width
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Login',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                 ),
-                textAlign: TextAlign.center, // Center text
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
+              // Center Image
+              Center(
+                child: Image.asset(
+                  'assets/OnBoarding.png',  // Replace with your image path
+                  height: 150,
+                ),
+              ),
+              const SizedBox(height: 30),
               TextField(
                 controller: _usernameController,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   filled: true,
-                  fillColor: Color(0x1A66BB6A), // Light fill color with low opacity (10%)
+                  fillColor: const Color(0x1A66BB6A), // Light fill color
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0), // Rounded corners
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for border
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF66BB6A), // Green color
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.0),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for focused state
-                      width: 2.0, // Thicker border when focused
+                    borderSide: const BorderSide(
+                      color: Color(0xFF66BB6A),
+                      width: 2.0,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Password',
                   filled: true,
-                  fillColor: Color(0x1A66BB6A), // Light fill color with low opacity (10%)
+                  fillColor: const Color(0x1A66BB6A),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.0), // Rounded corners
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for border
+                    borderRadius: BorderRadius.circular(10.0),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF66BB6A),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.0),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for focused state
-                      width: 2.0, // Thicker border when focused
+                    borderSide: const BorderSide(
+                      color: Color(0xFF66BB6A),
+                      width: 2.0,
                     ),
                   ),
                   suffixIcon: IconButton(
@@ -119,31 +123,74 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 obscureText: !_passwordVisible,
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ForgetPasswordScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(color: Colors.black),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: _login,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 80,vertical: 15),
-                  backgroundColor: Color(0xFF66BB6A),  // Using the requested color
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  backgroundColor: const Color(0xFF66BB6A),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),  // Rounded button shape
+                    borderRadius: BorderRadius.circular(30.0),
                   ),
                 ),
-                child: Text(
-                  'Log In',
-                  style: TextStyle(color: const Color.fromARGB(255, 0, 0, 0)),
+                child: const Text(
+                  'Login',
+                  style: TextStyle(color: Colors.black),
                 ),
               ),
-              SizedBox(height: 10),
-              TextButton(
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account? "),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SignUpScreen()), // Route to Sign Up Screen
+                      );
+                    },
+                    child: const Text(
+                      'Sign Up',
+                      style: TextStyle(color: Color(0xFF66BB6A), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Center(child: Text("OR")),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ForgetPasswordScreen()),
-                  );
+                  // Add Google Login functionality here
                 },
-                child: Text(
-                  'Forgot your password?',
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                ),
+                icon: Image.asset('assets/google_icon.png', height: 24), // Add Google icon image
+                label: const Text(
+                  'Login with Google',
                   style: TextStyle(color: Colors.black),
                 ),
               ),

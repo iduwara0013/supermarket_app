@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'changepassword.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
+  const ForgetPasswordScreen({super.key});
+
   @override
   _ForgetPasswordScreenState createState() => _ForgetPasswordScreenState();
 }
@@ -56,7 +58,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Forgot Password'),
+        title: const Text('Forgot Password'),
         backgroundColor: Colors.green,
       ),
       body: Padding(
@@ -73,7 +75,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             if (_otpSent)
               TextField(
                 controller: _otpController,
@@ -84,11 +86,11 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                   ),
                 ),
               ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _otpSent ? _verifyOtp : _sendOtp,
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 80, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
                 backgroundColor: Colors.green,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
@@ -96,7 +98,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
               ),
               child: Text(
                 _otpSent ? 'Verify OTP' : 'Send OTP',
-                style: TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],

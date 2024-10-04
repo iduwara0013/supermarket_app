@@ -4,7 +4,7 @@ import 'login_screen.dart';
 class ChangePasswordScreen extends StatefulWidget {
   final String email;
 
-  ChangePasswordScreen({required this.email});
+  const ChangePasswordScreen({super.key, required this.email});
 
   @override
   _ChangePasswordScreenState createState() => _ChangePasswordScreenState();
@@ -21,7 +21,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   if (password != confirmPassword) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Passwords do not match!'),
       ),
     );
@@ -34,7 +34,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     await user?.updatePassword(password);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Password changed successfully!'),
       ),
     );
@@ -57,7 +57,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Change Password'),
+        title: const Text('Change Password'),
         backgroundColor: Colors.green,
       ),
       body: Padding(
@@ -74,7 +74,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               obscureText: true,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextField(
               controller: _confirmPasswordController,
               decoration: InputDecoration(
@@ -85,17 +85,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               obscureText: true,
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _changePassword,
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 80, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
                 backgroundColor: Colors.green,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Change Password',
                 style: TextStyle(color: Colors.white),
               ),

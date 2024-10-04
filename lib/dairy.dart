@@ -9,6 +9,8 @@ void main() async {
 }
 
 class DairyPage extends StatefulWidget {
+  const DairyPage({super.key});
+
   @override
   _DairyPageState createState() => _DairyPageState();
 }
@@ -27,14 +29,23 @@ class _DairyPageState extends State<DairyPage> {
   }
 
   Future<void> _fetchProducts() async {
-    var querySnapshot = await _firestore.collection('dairyProducts').get();
+  try {
+    var querySnapshot = await _firestore.collection('dairyProduct').get();
     setState(() {
       _products = querySnapshot.docs;
       _filteredProducts = _products;
       _isLoading = false;
     });
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    print('Error fetching products: $e'); // Add this line to see any errors
   }
+}
 
+
+  // Filter products based on search query
   void _filterProducts(String query) {
     setState(() {
       _searchQuery = query;
@@ -54,11 +65,11 @@ class _DairyPageState extends State<DairyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('DAIRY'),
+        title: const Text('DAIRY'),
         backgroundColor: Colors.green,
         centerTitle: true,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(36.0),
+          preferredSize: const Size.fromHeight(36.0),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: TextField(
@@ -71,43 +82,39 @@ class _DairyPageState extends State<DairyPage> {
                   borderRadius: BorderRadius.circular(8.0),
                   borderSide: BorderSide.none,
                 ),
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
               ),
             ),
           ),
         ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : _filteredProducts.isEmpty
-              ? Center(child: Text('No Data Found'))
+              ? const Center(child: Text('No Data Found'))
               : ListView(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   children: _filteredProducts.map((doc) {
                     var data = doc.data() as Map<String, dynamic>;
-                    int stockCount = data['stock'];
+                    int stockCount = data['stock'] ?? 0;
                     String availability = stockCount > 0
                         ? 'In Stock ($stockCount available)'
                         : 'Out of Stock';
 
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0), // Add space between items
+                      padding: const EdgeInsets.only(bottom: 16.0),
                       child: ProductItem(
-                        imageUrl: 'assets/dairy.jpg', // Use local asset image
+                        imageUrl: 'assets/dairy.jpg', // Update path if image name changes
                         price: data['price'].toString(),
-                        name: data['name'].toString(),
+                        name: data['productName'].toString(),
                         size: data['size'].toString(),
-                        rating: data['rating'].toString(),
-                        ratingsCount: data['ratingsCount'].toString(),
                         discount: data['discount'].toString(),
                         nutriGrade: data['nutriGrade'].toString(),
                         availability: availability,
                       ),
                     );
                   }).toList(),
-                  
                 ),
-                
     );
   }
 }
@@ -117,19 +124,15 @@ class ProductItem extends StatelessWidget {
   final String price;
   final String name;
   final String size;
-  final String rating;
-  final String ratingsCount;
   final String discount;
   final String nutriGrade;
   final String availability;
 
-  ProductItem({
+  const ProductItem({super.key, 
     required this.imageUrl,
     required this.price,
     required this.name,
     required this.size,
-    required this.rating,
-    required this.ratingsCount,
     required this.discount,
     required this.nutriGrade,
     required this.availability,
@@ -141,12 +144,12 @@ class ProductItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Product Image
-        Container(
+        SizedBox(
           width: 110,
           height: 150,
-          child: Image.asset(imageUrl, fit: BoxFit.cover), // Load local asset image
+          child: Image.asset(imageUrl, fit: BoxFit.cover),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
         // Product Details
         Expanded(
           child: Column(
@@ -156,7 +159,7 @@ class ProductItem extends StatelessWidget {
                 children: [
                   Text(
                     price,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.orange,
@@ -164,12 +167,12 @@ class ProductItem extends StatelessWidget {
                   ),
                   if (discount.isNotEmpty)
                     Container(
-                      margin: EdgeInsets.only(left: 8),
-                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      margin: const EdgeInsets.only(left: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       color: Colors.yellow,
                       child: Text(
                         discount,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -177,45 +180,31 @@ class ProductItem extends StatelessWidget {
                     ),
                 ],
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 name,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 size,
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
-              SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    rating,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  SizedBox(width: 4),
-                  Text(
-                    ratingsCount,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.green),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       'Nutri-Grade: $nutriGrade',
-                      style: TextStyle(fontSize: 12, color: Colors.green),
+                      style: const TextStyle(fontSize: 12, color: Colors.green),
                     ),
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Text(
                     availability,
                     style: TextStyle(

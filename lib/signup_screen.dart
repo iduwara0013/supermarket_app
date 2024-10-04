@@ -1,211 +1,191 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Authentication package
-import 'homescreen.dart'; // Import the HomeScreen class
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'homescreen.dart';
 
 class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
   @override
   _SignUpScreenState createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _passwordVisible = false;
-  bool _newsletter = false;
+  final bool _newsletter = false;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Authentication instance
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _signUp() async {
-  final String name = _nameController.text.trim();
-  final String email = _emailController.text.trim();
-  final String password = _passwordController.text.trim();
+    try {
+      // Create a new user in Firebase Authentication
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
-  if (name.isEmpty || email.isEmpty || password.isEmpty) {
-    // Display an error message if any field is empty
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Please fill out all fields')),
-    );
-    return;
+      // Retrieve and increment the current_id
+      DocumentReference counterRef = _firestore.collection('counters').doc('user_counter');
+      DocumentSnapshot counterDoc = await counterRef.get();
+
+      if (counterDoc.exists) {
+        int currentId = counterDoc['current_id'];
+
+        // Increment the current_id
+        int newId = currentId + 1;
+
+        // Save the new ID back to the counters collection
+        await counterRef.update({'current_id': newId});
+
+        // Save user details in the users collection with the incremented ID
+        await _firestore.collection('users').doc(newId.toString()).set({
+          'name': _nameController.text,
+          'email': _emailController.text,
+          'phone': _phoneController.text,
+          'address': _addressController.text,
+          'membershipStatus': 'Not Registered', // Set default membership status
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign up successful!')),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()), // Navigate to HomeScreen
+        );
+      } else {
+        throw Exception("Counter document does not exist");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign up failed: ${e.toString()}')),
+      );
+    }
   }
-
-  try {
-    // Create a new user with Firebase Authentication
-    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    // Update the user profile with the display name
-    await userCredential.user!.updateProfile(displayName: name);
-    await userCredential.user!.reload(); // Reload to ensure the updated profile is fetched
-
-    // Show a success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sign up successful!')),
-    );
-
-    // Optionally, you can clear the fields after a successful sign up
-    _nameController.clear();
-    _emailController.clear();
-    _passwordController.clear();
-    setState(() {
-      _newsletter = false;
-      _passwordVisible = false;
-    });
-
-    // Navigate to the HomeScreen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen()),
-    );
-
-  } catch (e) {
-    // Handle Firebase Authentication errors
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to sign up: ${e.toString()}')),
-    );
-  }
-}
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white, // Background color similar to the uploaded image
       appBar: AppBar(
-        title: Text('Sign Up'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: Colors.white, // Background color of the AppBar
+        elevation: 0, // No shadow
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF2B2B2B)), // Back arrow color
+          onPressed: () {
+            Navigator.pop(context); // Navigate back when tapped
+          },
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 40),
-              Text(
+              const SizedBox(height: 20),
+              const Text(
                 'Sign Up',
                 style: TextStyle(
-                  fontSize: 30,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xFF2B2B2B), // Darker color for heading
                 ),
               ),
-              SizedBox(height: 20),
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  filled: true,
-                  fillColor: Color(0x1A66BB6A), // Light fill color with low opacity (10%)
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for border
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for focused state
-                      width: 2.0, // Thicker border when focused
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 30),
+              Image.asset(
+                'assets/OnBoarding.png', // Ensure the image path is correct
+                height: 200,
               ),
-              SizedBox(height: 20),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  filled: true,
-                  fillColor: Color(0x1A66BB6A), // Light fill color with low opacity (10%)
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for border
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for focused state
-                      width: 2.0, // Thicker border when focused
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              TextField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  filled: true,
-                  fillColor: Color(0x1A66BB6A), // Light fill color with low opacity (10%)
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for border
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Color(0xFF66BB6A), // Green color for focused state
-                      width: 2.0, // Thicker border when focused
-                    ),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _passwordVisible ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _passwordVisible = !_passwordVisible;
-                      });
-                    },
-                  ),
-                ),
-                obscureText: !_passwordVisible,
-              ),
-              SizedBox(height: 20),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _newsletter,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _newsletter = value!;
-                      });
-                    },
-                  ),
-                  Expanded(
-                    child: Text(
-                      'I would like to receive your newsletter and other promotional information',
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
+              const SizedBox(height: 30),
+              _buildCustomTextField('Name', _nameController),
+              const SizedBox(height: 20),
+              _buildCustomTextField('Email', _emailController),
+              const SizedBox(height: 20),
+              _buildCustomPasswordField(),
+              const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _signUp, // Call the _signUp method
+                onPressed: _signUp,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 120, vertical: 15),
-                  backgroundColor: Color(0xFF66BB6A), // Green color matching the button
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF6CC51D), // Text color on button
+                  padding: const EdgeInsets.symmetric(vertical: 16), // Adjusts padding inside button
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                    borderRadius: BorderRadius.circular(10.0), // Rounded corners
+                  ),
+                  minimumSize: const Size(double.infinity, 50), // Minimum size for the button (width, height)
+                ),
+                child: const Text(
+                  'Sign Up',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: Text(
-                  'Sign Up',
-                  style: TextStyle(color: Colors.white),
-                ),
               ),
-              SizedBox(height: 20),
-              
+              const SizedBox(height: 20),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomTextField(String label, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(
+          color: Color(0xFF888888), // Subtle color for the text field labels
+          fontWeight: FontWeight.bold,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF5F5F5), // Light gray background like in the image
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10), // Rounded corners
+          borderSide: BorderSide.none, // No border
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20), // Padding inside the text field
+      ),
+    );
+  }
+
+  Widget _buildCustomPasswordField() {
+    return TextField(
+      controller: _passwordController,
+      obscureText: !_passwordVisible,
+      decoration: InputDecoration(
+        labelText: 'Password',
+        labelStyle: const TextStyle(
+          color: Color(0xFF888888),
+          fontWeight: FontWeight.bold,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF5F5F5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _passwordVisible ? Icons.visibility : Icons.visibility_off,
+            color: const Color(0xFF888888),
+          ),
+          onPressed: () {
+            setState(() {
+              _passwordVisible = !_passwordVisible;
+            });
+          },
         ),
       ),
     );

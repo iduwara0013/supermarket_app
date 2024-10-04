@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Green Market'),
-        backgroundColor: Color(0xFF0CE319),
+        title: const Text('Green Market'),
+        backgroundColor: const Color(0xFF0CE319),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            color: Color(0xFF0CE319),
-            padding: EdgeInsets.all(10),
-            child: Row(
+            color: const Color(0xFF0CE319),
+            padding: const EdgeInsets.all(10),
+            child: const Row(
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.white,
@@ -28,7 +30,7 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          Container(
+          SizedBox(
             height: 200,
             child: Row(
               children: [
@@ -40,8 +42,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 Expanded(
                   child: Container(
-                    padding: EdgeInsets.all(10),
-                    child: Column(
+                    padding: const EdgeInsets.all(10),
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -68,8 +70,8 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          const Padding(
+            padding: EdgeInsets.all(16.0),
             child: Text(
               'My orders',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -109,14 +111,14 @@ class OrderStatusWidget extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  OrderStatusWidget({required this.icon, required this.label});
+  const OrderStatusWidget({super.key, required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Icon(icon, size: 40),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(label),
       ],
     );

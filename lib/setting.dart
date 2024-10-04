@@ -6,6 +6,8 @@ import 'category.dart'; // Import CategoryPage from category.dart
 import 'profile_information.dart';
 
 class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+
   @override
   _SettingsPageState createState() => _SettingsPageState();
 }
@@ -47,8 +49,8 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        title: Text('Account Settings'),
-        backgroundColor: Color(0xFF66BB6A),
+        title: const Text('Account Settings'),
+        backgroundColor: const Color(0xFF66BB6A),
         centerTitle: true,
       ),
       body: Padding(
@@ -56,14 +58,14 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 8),
-            Text('Update your account settings.'),
-            SizedBox(height: 20),
+            const SizedBox(height: 8),
+            const Text('Update your account settings.'),
+            const SizedBox(height: 20),
             ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Profile Information'),
-              subtitle: Text('Change your account details'),
-              trailing: Icon(Icons.arrow_forward_ios),
+              leading: const Icon(Icons.person),
+              title: const Text('Profile Information'),
+              subtitle: const Text('Change your account details'),
+              trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                  Navigator.push(
                   context,
@@ -72,22 +74,22 @@ class _SettingsPageState extends State<SettingsPage> {
                 // Handle Profile Information tap
               },
             ),
-            Divider(),
+            const Divider(),
             ListTile(
-              leading: Icon(Icons.delete),
-              title: Text('Delete Account'),
-              subtitle: Text('Delete your account from the app'),
-              trailing: Icon(Icons.arrow_forward_ios),
+              leading: const Icon(Icons.delete),
+              title: const Text('Delete Account'),
+              subtitle: const Text('Delete your account from the app'),
+              trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                 // Handle Delete Account tap
               },
             ),
-            Divider(),
+            const Divider(),
             ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
-              subtitle: Text('Log out of the App'),
-              trailing: Icon(Icons.arrow_forward_ios),
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              subtitle: const Text('Log out of the App'),
+              trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
                 // Handle Logout tap
               },
@@ -109,10 +111,10 @@ class BottomNavBar extends StatelessWidget {
   final Function(int) onItemTapped;
 
   const BottomNavBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -2,14 +2,17 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:my_first_app/login_screen.dart';
 import 'signup_screen.dart';
-void main() async{
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  
+
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -17,95 +20,124 @@ class MyApp extends StatelessWidget {
       home: GreenMarketScreen(),
       routes: {
         '/login': (context) => LoginScreen(),
-         '/signup': (context) => SignUpScreen(),
+        '/signup': (context) => SignUpScreen(),
       },
     );
   }
 }
 
 class GreenMarketScreen extends StatelessWidget {
+  const GreenMarketScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF66BB6A),
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.shopping_cart,
-                    size: 50,
-                    color: Colors.black,
-                  ),
-                ),
-                SizedBox(height: 20),
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: const TextSpan(
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Top green background with curve
+          ClipPath(
+            clipper: TopCurveClipper(),
+            child: Container(
+              color: const Color(0xFF3A6810), // Green background color
+              height: MediaQuery.of(context).size.height * 0.5, // Adjust the height as needed
+            ),
+          ),
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Image with person holding a box
+                  SizedBox(
+                    width: 600, // Adjust the width as needed
+                    height: 400, // Adjust the height as needed
+                    child: Image.asset(
+                      'assets/deliveryboy.png', // Replace with your actual image path
+                      fit: BoxFit.cover, // Adjust the fit as needed
                     ),
+                  ),
+                 const SizedBox(height: 1),
+                  const Text(
+                    'Groceries without Stress',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Order from a wide selection of 5000+ fresh produce\nand groceries at the Comfort of your home',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  // Row for Login and Sign Up buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      TextSpan(
-                        text: 'Green ',
-                        style: TextStyle(color: Colors.white),
+                      // Login Button
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/login'); // Navigate to login screen
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          backgroundColor: const Color(0xFF6CC51D), // Light green color
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
                       ),
-                      TextSpan(
-                        text: 'Market',
-                        style: TextStyle(color: Colors.black),
+                      // Sign Up Button
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/signup'); // Navigate to signup screen
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          backgroundColor: const Color(0xFF6CC51D), // Light green color
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign Up',
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const Text(
-                  'EXPLORE SHOPPING',
-                  style: TextStyle(color: Colors.white, letterSpacing: 2),
-                ),
-                SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/login'); // Navigate to login screen
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 120, vertical: 15),
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'Log In',
-                    style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                  ),
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/signup');
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 120, vertical: 15), backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                  ),
-                ),
-                child: const Text(
-                  'Sign Up',
-                  style: TextStyle(color: Colors.black),
-                ),
+                ],
               ),
-              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
+
+// Custom Clipper for top curve
+class TopCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 100); // Start at the bottom left
+    path.quadraticBezierTo(
+        size.width / 2, size.height, size.width, size.height - 100); // Curve effect
+    path.lineTo(size.width, 0); // Line to the top right
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
