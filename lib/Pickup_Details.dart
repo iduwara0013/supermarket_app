@@ -4,9 +4,9 @@ import 'Delivery.dart'; // Import your Delivery.dart file here
 import 'CardPaymentScreen.dart'; // Import CardPaymentScreen
 
 class PickupDetailsScreen extends StatefulWidget {
-  final String docId; // Add a field for the document ID
+  final String userId; // Added userId field for later use
 
-  const PickupDetailsScreen({Key? key, required this.docId}) : super(key: key);
+  const PickupDetailsScreen({Key? key, required this.userId, required String docId}) : super(key: key);
 
   @override
   _PickupDetailsScreenState createState() => _PickupDetailsScreenState();
@@ -31,8 +31,8 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       return;
     }
 
-    // Use the passed document ID for the PickupDetails
-    String docName = widget.docId; // Use the passed document ID
+    // Create a unique document ID
+    String docName = DateTime.now().millisecondsSinceEpoch.toString(); // Create a unique ID based on current time
 
     // Create a map with the input details
     Map<String, dynamic> pickupDetails = {
@@ -41,9 +41,11 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       'dateTime': _dateTimeController.text,
       'notes': _notesController.text,
       'refundOption': _refundOption,
+      'userId': widget.userId, // Include userId for reference if needed
     };
 
     try {
+      print('Document ID: $docName'); // Debugging line
       // Save the pickup details in Firestore
       await FirebaseFirestore.instance.collection('PickupDetails').doc(docName).set(pickupDetails);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -53,6 +55,7 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving pickup details: $e')),
       );
+      print('Error saving pickup details: $e'); // Log error for debugging
     }
   }
 
@@ -62,16 +65,15 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
 
     if (_refundOption == 'Cash on Delivery') {
       Navigator.push(
-            context,
-            MaterialPageRoute(
-          builder: (context) => DeliveryScreen(docId: 'yourDocId'), // Replace with the actual document ID
+        context,
+        MaterialPageRoute(
+          builder: (context) => DeliveryScreen(docId: '',), // Modify this if DeliveryScreen needs parameters
         ),
       );
-
     } else if (_refundOption == 'Online Payment') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CardPaymentScreen(docId: widget.docId)), // Pass docId to CardPaymentScreen
+        MaterialPageRoute(builder: (context) => CardPaymentScreen(docId: '',)), // Modify this if CardPaymentScreen needs parameters
       );
     }
   }

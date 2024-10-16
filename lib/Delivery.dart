@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 
 class DeliveryScreen extends StatefulWidget {
   final String docId; // Added docId as a parameter
@@ -16,10 +17,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  
-  // Placeholder for the DateTime and refund option
-  DateTime? dateTime; // You can fetch this based on your logic
-  String refundOption = ''; // Assign a default or fetched value
+
+  DateTime? dateTime; // Placeholder for the DateTime and refund option
+  String refundOption = 'Cash on Delivery'; // Default value
   double total = 0.0; // Placeholder for the total amount
 
   @override
@@ -40,8 +40,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _nameController.text = snapshot.get('name') ?? ''; // Fetches the 'name' field
           _phoneController.text = snapshot.get('phone') ?? ''; // Fetches the 'phone' field
           _addressController.text = snapshot.get('address') ?? ''; // Fetches the 'address' field
-          dateTime = snapshot.get('dateTime').toDate(); // Fetch DateTime
-          refundOption = snapshot.get('refundOption') ?? ''; // Fetch refund option
+          dateTime = snapshot.get('dateTime')?.toDate(); // Fetch DateTime
+          refundOption = snapshot.get('refundOption') ?? 'Cash on Delivery'; // Fetch refund option
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +90,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       String createdAtDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       String createdAtTime = DateFormat('HH:mm:ss').format(DateTime.now());
 
+      // Get the logged-in user's ID (this should match the ID in your users collection)
+      String userId = FirebaseAuth.instance.currentUser?.uid ?? ''; // Get the user ID
+
       // Create a new document in the transactions collection
       await FirebaseFirestore.instance
           .collection('transactions')
@@ -103,7 +106,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         'amount': total, // Total amount fetched from the cart
         'date': createdAtDate, // Date when the transaction was created
         'time': createdAtTime, // Time when the transaction was created
-       
+        'userId': userId, // Add the user ID field that corresponds to the users collection
       });
 
       // Save the transaction ID in the transactionsId collection
@@ -167,6 +170,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               ],
             ),
             const SizedBox(height: 20),
+            const Text(
+              'Payment Method',
+              style: TextStyle(fontSize: 14),
+            ),
+            _buildPaymentOption('Cash on Delivery'),
+            _buildPaymentOption('Online Payment'),
+            const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.lightGreen,
@@ -210,6 +220,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ),
         Text(label, style: const TextStyle(fontSize: 16)),
       ],
+    );
+  }
+
+  Widget _buildPaymentOption(String label) {
+    return RadioListTile<String>(
+      title: Text(label),
+      value: label,
+      groupValue: refundOption, // Use refundOption to manage selection
+      onChanged: (value) {
+        setState(() {
+          refundOption = value!; // Update the selected payment method
+        });
+      },
     );
   }
 }

@@ -45,6 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
         // Save user details in the users collection with the incremented ID
         await _firestore.collection('users').doc(newId.toString()).set({
+          'userId': newId.toString(), // Add the document ID as the userId field
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,

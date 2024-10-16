@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'Pickup_Details.dart';  // Import the Pickup Details page
+import 'package:firebase_auth/firebase_auth.dart';
+import 'Pickup_Details.dart'; // Import the Pickup Details page
 
 class ShoppingCartPage extends StatelessWidget {
   final double discount = 0.0;
@@ -8,6 +9,22 @@ class ShoppingCartPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get the current user
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    // Check if the user is logged in and retrieve their document ID
+    String? userId = currentUser?.uid;
+    if (userId == null) {
+      // User is not logged in, show empty cart message
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.green,
+          title: Text('Shopping Cart'),
+        ),
+        body: Center(child: Text('Your cart is empty. Please log in to add items.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
@@ -15,23 +32,35 @@ class ShoppingCartPage extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
           onPressed: () {
-            // Handle back button press
             Navigator.pop(context);
           },
         ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('cart').doc('13').snapshots(),
+        stream: FirebaseFirestore.instance.collection('cart').doc('16').snapshots(), // Use the user's UID dynamically
         builder: (context, snapshot) {
+          // Error handling
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          // Show loading indicator while fetching data
           if (!snapshot.hasData) {
             return Center(child: CircularProgressIndicator());
           }
 
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          List<dynamic> cartItems = data['items'];
-          double subTotal = data['total'].toDouble();
-          double total = subTotal - discount + deliveryCharge;
+          // Check if the cart is empty or doesn't exist
+          if (!snapshot.data!.exists) {
+            return Center(child: Text('Your cart is empty.'));
+          }
 
+          // Get cart data
+          var data = snapshot.data!.data() as Map<String, dynamic>;
+          List<dynamic> cartItems = data['items'] ?? [];
+          num subTotal = data['total'] ?? 0; // Handle both int and double
+          double total = subTotal.toDouble() - discount + deliveryCharge;
+
+          // Display cart items
           return Column(
             children: [
               Expanded(
@@ -42,15 +71,17 @@ class ShoppingCartPage extends StatelessWidget {
                     return cartItem(
                       itemName: item['name'],
                       itemDetails: 'Quantity: ${item['quantity']}',
-                      price: item['price'],
+                      price: (item['price'] as num).toDouble(), // Ensure price is treated as double
                       itemCount: item['quantity'],
-                      available: true,  // Assuming all items are available for now
+                      available: true, // Assuming all items are available for now
+                      userId: userId,
+                      itemIndex: index,
                     );
                   },
                 ),
               ),
-              summarySection(subTotal, total),
-              checkoutButtons(context, '13'), // Pass the document ID here
+              summarySection(subTotal.toDouble(), total),
+              checkoutButtons(context, userId),
             ],
           );
         },
@@ -64,6 +95,8 @@ class ShoppingCartPage extends StatelessWidget {
     required double price,
     required int itemCount,
     required bool available,
+    required String userId,
+    required int itemIndex,
   }) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -125,6 +158,7 @@ class ShoppingCartPage extends StatelessWidget {
                 icon: Icon(Icons.add_circle_outline, color: Colors.green),
                 onPressed: () {
                   // Handle item increase
+                  updateCartItemQuantity(userId, itemIndex, itemCount + 1);
                 },
               ),
               Text(
@@ -137,13 +171,20 @@ class ShoppingCartPage extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.remove_circle_outline, color: Colors.green),
                 onPressed: () {
-                  // Handle item decrease
+                  if (itemCount > 1) {
+                    // Handle item decrease
+                    updateCartItemQuantity(userId, itemIndex, itemCount - 1);
+                  } else {
+                    // Remove item if quantity is 1
+                    removeCartItem(userId, itemIndex);
+                  }
                 },
               ),
               IconButton(
                 icon: Icon(Icons.delete, color: Colors.black),
                 onPressed: () {
                   // Handle item removal
+                  removeCartItem(userId, itemIndex);
                 },
               ),
             ],
@@ -194,7 +235,7 @@ class ShoppingCartPage extends StatelessWidget {
     );
   }
 
-  Widget checkoutButtons(BuildContext context, String docId) {
+  Widget checkoutButtons(BuildContext context, String userId) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
@@ -205,7 +246,8 @@ class ShoppingCartPage extends StatelessWidget {
                 backgroundColor: Colors.green,
               ),
               onPressed: () {
-                // Handle cancel
+                // Handle cancel action
+                Navigator.pop(context); // Go back to the previous screen
               },
               child: Text('CANCEL'),
             ),
@@ -221,7 +263,7 @@ class ShoppingCartPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PickupDetailsScreen(docId: docId), // Pass the doc ID
+                    builder: (context) => PickupDetailsScreen(userId: userId, docId: '',), // Pass the user ID correctly
                   ),
                 );
               },
@@ -231,5 +273,21 @@ class ShoppingCartPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void updateCartItemQuantity(String userId, int itemIndex, int newQuantity) {
+    FirebaseFirestore.instance.collection('cart').doc(userId).update({
+      'items.$itemIndex.quantity': newQuantity, // Update the specific item's quantity
+    });
+  }
+
+  void removeCartItem(String userId, int itemIndex) {
+    FirebaseFirestore.instance.collection('cart').doc(userId).update({
+      'items': FieldValue.arrayRemove([{
+        'name': 'item_name_here', // Replace with the actual item name
+        'quantity': 1, // Replace with the actual item quantity
+        'price': 'item_price_here' // Replace with the actual item price
+      }]), // Remove item from array
+    });
   }
 }

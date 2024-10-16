@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'Delivery.dart'; // Import your Delivery screen
 
 class CardPaymentScreen extends StatefulWidget {
   final String docId; // Accept docId as a parameter
@@ -187,9 +188,36 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
         const SnackBar(content: Text('Processing Payment')),
       );
 
+      // Save payment details to Firestore
+      _addPaymentDetails().then((_) {
+        // Navigate to Delivery.dart after successful payment
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => DeliveryScreen(docId: '',)), // Replace with your Delivery screen widget
+        );
+      });
+
       if (_saveCard) {
         _saveCardDetails();
       }
+    }
+  }
+
+  // Save payment details to Firestore
+  Future<void> _addPaymentDetails() async {
+    try {
+      await FirebaseFirestore.instance.collection('payment').add({
+        'paymentName': 'Your Payment Name', // Replace with the actual payment name
+        'payAmount': 100.0, // Replace with the actual amount you want to save
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment details saved successfully!')),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save payment details: $error')),
+      );
     }
   }
 
