@@ -117,7 +117,7 @@ class _GroceryPageState extends State<GroceryPage> {
                               name: product['productName'],
                               price: 'Rs ${product['finalPrice']}',
                               company: product['company'] ?? 'Unknown',
-                              stockCount: calculateTotalStock(product),
+                              stockCount: product['inStockMonth']['totalStock'] ?? 0, // Access totalStock directly
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
@@ -189,7 +189,7 @@ class _GroceryPageState extends State<GroceryPage> {
     // Update stock for the current month without creating a new field
     int currentMonth = DateTime.now().month;
     await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
-      'inStockMonth.$currentMonth.stockCount': FieldValue.increment(-1), // Decrease stock count
+      'inStockMonth.totalStock': FieldValue.increment(-1), // Decrease stock count directly
     });
   }
 
@@ -236,19 +236,8 @@ class _GroceryPageState extends State<GroceryPage> {
     // Update stock for the current month without creating a new field
     int currentMonth = DateTime.now().month;
     await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
-      'inStockMonth.$currentMonth.stockCount': FieldValue.increment(1), // Increase stock count
+      'inStockMonth.totalStock': FieldValue.increment(1), // Increase stock count directly
     });
-  }
-
-  int calculateTotalStock(Map<String, dynamic> product) {
-    Map<String, dynamic> inStockMonth = product['inStockMonth'] ?? {};
-    int totalStockCount = 0;
-
-    inStockMonth.forEach((month, monthData) {
-      totalStockCount += (monthData['stockCount'] as int?) ?? 0;
-    });
-
-    return totalStockCount;
   }
 }
 
@@ -368,7 +357,7 @@ class ProductDetailPage extends StatelessWidget {
             const SizedBox(height: 8.0),
             Text('Company: ${product['company'] ?? 'Unknown'}'),
             const SizedBox(height: 8.0),
-            Text('Stock: ${product['inStockMonth']?.values.map((m) => m['stockCount']).reduce((a, b) => a + b) ?? 0}'),
+            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'), // Get total stock directly
             const SizedBox(height: 8.0),
             ElevatedButton(
               onPressed: () {
