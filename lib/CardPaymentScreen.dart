@@ -193,7 +193,7 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
         // Navigate to Delivery.dart after successful payment
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => DeliveryScreen(docId: '',)), // Replace with your Delivery screen widget
+          MaterialPageRoute(builder: (context) => DeliveryScreen( )), // Replace with your Delivery screen widget
         );
       });
 

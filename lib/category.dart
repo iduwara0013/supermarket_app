@@ -80,7 +80,7 @@ class _CategoryPageState extends State<CategoryPage> {
                 if (categories[index]['label'] == 'Beverages') {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => BeverageScreen()), // Navigate to your Beverage screen
+                    MaterialPageRoute(builder: (context) => BeveragesScreen()), // Navigate to your Beverage screen
                   );
                 }
               },

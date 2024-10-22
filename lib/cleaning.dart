@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'shopping_cart.dart';
+import 'shopping_cart.dart' as shoppingCart; // Prefix for avoiding ambiguity
 
 void main() {
   runApp(MaterialApp(
@@ -15,7 +15,23 @@ class GroceryPage extends StatefulWidget {
 
 class _GroceryPageState extends State<GroceryPage> {
   String selectedCategory = 'All';
-  final String userId = 'your_user_id'; // Replace with your user ID
+  String userId = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserId();
+  }
+
+  Future<void> _fetchUserId() async {
+    var userSnapshot = await FirebaseFirestore.instance.collection('current_user').doc('current').get();
+    if (userSnapshot.exists) {
+      setState(() {
+        userId = userSnapshot.data()?['userId'] ?? '';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,80 +52,84 @@ class _GroceryPageState extends State<GroceryPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+                MaterialPageRoute(builder: (context) => shoppingCart.ShoppingCartPage()),
               );
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'What are you looking for',
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
-
-          // Categories
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: userId.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                CategoryButton(text: 'Flour', selected: selectedCategory == 'Flour', onTap: () => _selectCategory('Flour')),
-                CategoryButton(text: 'Sugar', selected: selectedCategory == 'Sugar', onTap: () => _selectCategory('Sugar')),
-                // Add more categories as needed
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'What are you looking for',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
+                      CategoryButton(text: 'Flour', selected: selectedCategory == 'Flour', onTap: () => _selectCategory('Flour')),
+                      CategoryButton(text: 'Sugar', selected: selectedCategory == 'Sugar', onTap: () => _selectCategory('Sugar')),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: StreamBuilder(
+                    stream: FirebaseFirestore.instance.collection('grocery').snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      var products = snapshot.data!.docs;
+                      var filteredProducts = products.where((product) {
+                        if (selectedCategory == 'All') {
+                          return true;
+                        }
+                        return product['productCategory'] == selectedCategory;
+                      }).toList();
+
+                      return ListView.builder(
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          var product = filteredProducts[index].data() as Map<String, dynamic>;
+                          product['id'] = filteredProducts[index].id;
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => ProductDetailPage(product: product)),
+                              );
+                            },
+                            child: ProductItem(
+                              imageUrl: product['productImage'],
+                              name: product['productName'],
+                              price: 'Rs ${product['finalPrice']}',
+                              company: product['company'] ?? 'Unknown',
+                              stockCount: calculateTotalStock(product),
+                              product: product,
+                              onAdd: () => addToCart(product),
+                              onRemove: () => removeFromCart(product),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
-          ),
-
-          // Product List
-          Expanded(
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance.collection('grocery').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                var products = snapshot.data!.docs;
-                var filteredProducts = products.where((product) {
-                  if (selectedCategory == 'All') {
-                    return true;
-                  }
-                  return product['productCategory'] == selectedCategory;
-                }).toList();
-
-                return ListView.builder(
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    var product = filteredProducts[index].data() as Map<String, dynamic>;
-                    product['id'] = filteredProducts[index].id;
-
-                    return ProductItem(
-                      imageUrl: product['productImage'],
-                      name: product['productName'],
-                      price: 'Rs ${product['finalPrice']}',
-                      company: product['company'] ?? 'Unknown',
-                      stockCount: product['stockCount'] ?? 0,
-                      product: product,
-                      onAdd: () => addToCart(product),
-                      onRemove: () => removeFromCart(product),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -120,17 +140,115 @@ class _GroceryPageState extends State<GroceryPage> {
   }
 
   Future<void> addToCart(Map<String, dynamic> product) async {
-    var cartDoc = FirebaseFirestore.instance.collection('shoppingCart').doc(userId);
-    await cartDoc.set({
-      'products': FieldValue.arrayUnion([product]),
+    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+
+    var cartSnapshot = await cartDocRef.get();
+    List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+
+    double totalPrice = 0.0;
+    var totalPriceData = cartSnapshot.data()?['totalPrice'];
+    if (totalPriceData is String) {
+      totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+    } else if (totalPriceData is num) {
+      totalPrice = totalPriceData.toDouble();
+    }
+
+    double productPrice = 0.0;
+    var finalPrice = product['finalPrice'];
+    if (finalPrice is String) {
+      productPrice = double.tryParse(finalPrice) ?? 0.0;
+    } else if (finalPrice is num) {
+      productPrice = finalPrice.toDouble();
+    }
+
+    bool itemExists = false;
+    for (var item in cartItems) {
+      if (item['name'] == product['productName']) {
+        item['quantity']++;
+        totalPrice += productPrice;
+        itemExists = true;
+        break;
+      }
+    }
+
+    if (!itemExists) {
+      cartItems.add({
+        'category': product['productCategory'],
+        'name': product['productName'],
+        'price': productPrice,
+        'quantity': 1,
+      });
+      totalPrice += productPrice;
+    }
+
+    await cartDocRef.set({
+      'items': cartItems,
+      'totalPrice': totalPrice,
     }, SetOptions(merge: true));
+
+    // Update stock for the current month without creating a new field
+    int currentMonth = DateTime.now().month;
+    await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
+      'inStockMonth.$currentMonth.stockCount': FieldValue.increment(-1), // Decrease stock count
+    });
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
-    var cartDoc = FirebaseFirestore.instance.collection('shoppingCart').doc(userId);
-    await cartDoc.update({
-      'products': FieldValue.arrayRemove([product]),
+    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+
+    var cartSnapshot = await cartDocRef.get();
+    List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+
+    double totalPrice = 0.0;
+    var totalPriceData = cartSnapshot.data()?['totalPrice'];
+    if (totalPriceData is String) {
+      totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+    } else if (totalPriceData is num) {
+      totalPrice = totalPriceData.toDouble();
+    }
+
+    double productPrice = 0.0;
+    var finalPrice = product['finalPrice'];
+    if (finalPrice is String) {
+      productPrice = double.tryParse(finalPrice) ?? 0.0;
+    } else if (finalPrice is num) {
+      productPrice = finalPrice.toDouble();
+    }
+
+    for (var item in cartItems) {
+      if (item['name'] == product['productName']) {
+        if (item['quantity'] > 1) {
+          item['quantity']--;
+          totalPrice -= productPrice;
+        } else {
+          totalPrice -= productPrice;
+          cartItems.remove(item);
+        }
+        break;
+      }
+    }
+
+    await cartDocRef.set({
+      'items': cartItems,
+      'totalPrice': totalPrice,
+    }, SetOptions(merge: true));
+
+    // Update stock for the current month without creating a new field
+    int currentMonth = DateTime.now().month;
+    await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
+      'inStockMonth.$currentMonth.stockCount': FieldValue.increment(1), // Increase stock count
     });
+  }
+
+  int calculateTotalStock(Map<String, dynamic> product) {
+    Map<String, dynamic> inStockMonth = product['inStockMonth'] ?? {};
+    int totalStockCount = 0;
+
+    inStockMonth.forEach((month, monthData) {
+      totalStockCount += (monthData['stockCount'] as int?) ?? 0;
+    });
+
+    return totalStockCount;
   }
 }
 
@@ -187,94 +305,79 @@ class ProductItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      elevation: 5,
+      margin: const EdgeInsets.all(8),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Display product image from Firebase Storage using the URL
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  imageUrl,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.broken_image, size: 100, color: Colors.grey);
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Display product details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      textAlign: TextAlign.left,
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      company,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      textAlign: TextAlign.left,
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      price,
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      textAlign: TextAlign.left,
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '$stockCount items Available',
-                      style: const TextStyle(fontSize: 14, color: Colors.green),
-                      textAlign: TextAlign.left,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Add and subtract buttons with availability check
-              Column(
+          Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Colors.green),
-                    onPressed: (stockCount > 0) ? onAdd : null,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle, color: Colors.red),
-                    onPressed: onRemove,
-                  ),
+                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(company),
+                  Text(price, style: const TextStyle(color: Colors.green)),
+                  Text('Stock: $stockCount', style: const TextStyle(color: Colors.red)),
                 ],
+              ),
+            ),
+          ),
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: stockCount > 0 ? onAdd : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: stockCount > 0 ? onRemove : null,
               ),
             ],
           ),
-
-          // Display out-of-stock message if stock count is zero
-          if (stockCount == 0)
-            const Text(
-              'Out of Stock',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
         ],
+      ),
+    );
+  }
+}
+
+class ProductDetailPage extends StatelessWidget {
+  final Map<String, dynamic> product;
+
+  const ProductDetailPage({super.key, required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(product['productName']),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.network(product['productImage']),
+            const SizedBox(height: 16.0),
+            Text(
+              'Price: Rs ${product['finalPrice']}',
+              style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8.0),
+            Text('Company: ${product['company'] ?? 'Unknown'}'),
+            const SizedBox(height: 8.0),
+            Text('Stock: ${product['inStockMonth']?.values.map((m) => m['stockCount']).reduce((a, b) => a + b) ?? 0}'),
+            const SizedBox(height: 8.0),
+            ElevatedButton(
+              onPressed: () {
+                // Logic to add to cart can be implemented here
+              },
+              child: const Text('Add to Cart'),
+            ),
+          ],
+        ),
       ),
     );
   }

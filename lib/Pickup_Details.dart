@@ -4,9 +4,7 @@ import 'Delivery.dart'; // Import your Delivery.dart file here
 import 'CardPaymentScreen.dart'; // Import CardPaymentScreen
 
 class PickupDetailsScreen extends StatefulWidget {
-  final String userId; // Added userId field for later use
-
-  const PickupDetailsScreen({Key? key, required this.userId, required String docId}) : super(key: key);
+  const PickupDetailsScreen({Key? key}) : super(key: key);
 
   @override
   _PickupDetailsScreenState createState() => _PickupDetailsScreenState();
@@ -18,6 +16,50 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _dateTimeController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserIdAndDetails();
+  }
+
+  // Fetch userId from the 'current_user' collection and user details from the 'users' collection
+  Future<void> _fetchUserIdAndDetails() async {
+    try {
+      final currentUserDoc = await FirebaseFirestore.instance.collection('current_user').doc('current').get();
+      if (currentUserDoc.exists) {
+        _userId = currentUserDoc.data()?['userId']; // Fetch userId
+        _loadUserDetails(_userId);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching user details: $e')),
+      );
+    }
+  }
+
+  // Load user details from the 'users' collection
+  Future<void> _loadUserDetails(String? userId) async {
+    if (userId != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          var userData = userDoc.data();
+          _nameController.text = userData?['name'] ?? ''; // Assuming name field exists
+          _phoneController.text = userData?['phone'] ?? ''; // Assuming phone field exists
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not found in users collection')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user data: $e')),
+        );
+      }
+    }
+  }
 
   // Method to save input details to Firestore
   Future<void> _savePickupDetails() async {
@@ -41,7 +83,7 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       'dateTime': _dateTimeController.text,
       'notes': _notesController.text,
       'refundOption': _refundOption,
-      'userId': widget.userId, // Include userId for reference if needed
+      'userId': _userId, // Include userId for reference if needed
     };
 
     try {
@@ -67,13 +109,13 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => DeliveryScreen(docId: '',), // Modify this if DeliveryScreen needs parameters
+          builder: (context) => DeliveryScreen( ), // Modify this if DeliveryScreen needs parameters
         ),
       );
     } else if (_refundOption == 'Online Payment') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CardPaymentScreen(docId: '',)), // Modify this if CardPaymentScreen needs parameters
+        MaterialPageRoute(builder: (context) => CardPaymentScreen(docId: '')), // Modify this if CardPaymentScreen needs parameters
       );
     }
   }

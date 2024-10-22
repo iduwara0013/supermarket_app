@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'forget_password.dart';
-import 'signup_screen.dart'; // Ensure this is the correct path to your SignUpScreen file
+import 'signup_screen.dart';
 import 'homescreen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,17 +18,46 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _passwordVisible = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   void _login() async {
     final String email = _usernameController.text.trim();
     final String password = _passwordController.text.trim();
 
     try {
+      // Sign in with email and password
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      // Get the user ID of the logged-in user
+      String userId = userCredential.user!.uid;
+
+      // Fetch user document from 'users' collection using email
+      QuerySnapshot userQuerySnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
+
+      // Check if any documents were found
+      if (userQuerySnapshot.docs.isNotEmpty) {
+        // Get the first document found
+        DocumentSnapshot userDoc = userQuerySnapshot.docs.first;
+
+        // Check if the document exists and has the 'userId' field
+        if (userDoc.exists && userDoc.data() != null) {
+          String userUserId = userDoc['userId'] as String;
+
+          // Save to 'current_user' collection
+          await _firestore.collection('current_user').doc('current').set({
+            'userId': userUserId,
+            'email': email,
+          });
+        }
+      }
+
+      // Navigate to Home Screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
@@ -64,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Center Image
               Center(
                 child: Image.asset(
-                  'assets/OnBoarding.png',  // Replace with your image path
+                  'assets/OnBoarding.png', // Replace with your image path
                   height: 150,
                 ),
               ),
@@ -163,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SignUpScreen()), // Route to Sign Up Screen
+                        MaterialPageRoute(builder: (context) => SignUpScreen()),
                       );
                     },
                     child: const Text(
@@ -188,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(30.0),
                   ),
                 ),
-                icon: Image.asset('assets/google_icon.png', height: 24), // Add Google icon image
+                icon: Image.asset('assets/google_icon.png', height: 24),
                 label: const Text(
                   'Login with Google',
                   style: TextStyle(color: Colors.black),

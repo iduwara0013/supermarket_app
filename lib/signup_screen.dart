@@ -51,6 +51,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           'phone': _phoneController.text,
           'address': _addressController.text,
           'membershipStatus': 'Not Registered', // Set default membership status
+          'createdAt': FieldValue.serverTimestamp(), // Automatically add the createdAt timestamp
         });
 
         ScaffoldMessenger.of(context).showSnackBar(

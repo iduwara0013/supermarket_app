@@ -1,57 +1,90 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'homescreen.dart';
 
 class DeliveryScreen extends StatefulWidget {
-  final String docId; // Added docId as a parameter
-
-  const DeliveryScreen({super.key, required this.docId}); // Constructor to accept docId
+  const DeliveryScreen({super.key});
 
   @override
   State<DeliveryScreen> createState() => _DeliveryScreenState();
 }
 
 class _DeliveryScreenState extends State<DeliveryScreen> {
-  String _selectedAddressType = 'Home'; // Default selected option
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
-  DateTime? dateTime; // Placeholder for the DateTime and refund option
-  String refundOption = 'Cash on Delivery'; // Default value
-  double total = 0.0; // Placeholder for the total amount
+  double total = 0.0;
+  String refundOption = '';
+  String userId = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchPickupDetails(widget.docId); // Pass the docId to fetch details
+    _fetchUserDetails();
   }
 
-  Future<void> _fetchPickupDetails(String docId) async {
+  Future<void> _fetchUserDetails() async {
     try {
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('PickupDetails')
-          .doc(docId) // Use the passed docId
+      DocumentSnapshot currentUserSnapshot = await FirebaseFirestore.instance
+          .collection('current_user')
+          .doc('current')
           .get();
 
-      if (snapshot.exists) {
-        setState(() {
-          _nameController.text = snapshot.get('name') ?? ''; // Fetches the 'name' field
-          _phoneController.text = snapshot.get('phone') ?? ''; // Fetches the 'phone' field
-          _addressController.text = snapshot.get('address') ?? ''; // Fetches the 'address' field
-          dateTime = snapshot.get('dateTime')?.toDate(); // Fetch DateTime
-          refundOption = snapshot.get('refundOption') ?? 'Cash on Delivery'; // Fetch refund option
-        });
+      if (currentUserSnapshot.exists) {
+        userId = currentUserSnapshot.get('userId');
+
+        DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (userSnapshot.exists) {
+          setState(() {
+            _nameController.text = userSnapshot.get('name') ?? '';
+            _phoneController.text = userSnapshot.get('phone') ?? '';
+            _addressController.text = userSnapshot.get('address') ?? '';
+          });
+          _fetchRefundOption(userId);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not found')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pickup details not found')),
+          const SnackBar(content: Text('Current user not found')),
         );
       }
     } catch (e) {
-      print('Error fetching data: $e');
+      print('Error fetching user details: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching data: ${e.toString()}')),
+        SnackBar(content: Text('Error fetching user details: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _fetchRefundOption(String userId) async {
+    try {
+      QuerySnapshot pickupDetailsSnapshot = await FirebaseFirestore.instance
+          .collection('PickupDetails')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      if (pickupDetailsSnapshot.docs.isNotEmpty) {
+        setState(() {
+          refundOption = pickupDetailsSnapshot.docs[0].get('refundOption') ?? '';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pickup details found for this user')),
+        );
+      }
+    } catch (e) {
+      print('Error fetching refund option: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching refund option: ${e.toString()}')),
       );
     }
   }
@@ -60,12 +93,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     try {
       QuerySnapshot cartSnapshot = await FirebaseFirestore.instance
           .collection('cart')
+          .where('userId', isEqualTo: userId)
           .get();
 
-      // Assuming you're only interested in the first document's total field
       if (cartSnapshot.docs.isNotEmpty) {
         setState(() {
-          total = cartSnapshot.docs[0].get('total') ?? 0.0; // Fetches the total field
+          total = cartSnapshot.docs[0].get('totalPrice') ?? 0.0;
         });
       }
     } catch (e) {
@@ -78,56 +111,72 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   Future<void> _saveTransaction() async {
     try {
-      // Fetch the current maximum transaction ID
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('transactions')
           .orderBy(FieldPath.documentId)
           .get();
 
-      int newId = querySnapshot.docs.length + 1; // Calculate new ID
+      int newId = querySnapshot.docs.length + 1;
 
-      // Divide the createdAt timestamp into date and time
       String createdAtDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       String createdAtTime = DateFormat('HH:mm:ss').format(DateTime.now());
 
-      // Get the logged-in user's ID (this should match the ID in your users collection)
-      String userId = FirebaseAuth.instance.currentUser?.uid ?? ''; // Get the user ID
-
-      // Create a new document in the transactions collection
       await FirebaseFirestore.instance
           .collection('transactions')
-          .doc('$newId') // Use newId as the document ID
+          .doc('$newId')
           .set({
-        'name': _nameController.text, // Name field
-        'phone': _phoneController.text, // Phone number field
-        'address': _addressController.text, // Address field
-        'paymentMethod': refundOption, // Refund option from PickupDetails
-        'addressType': _selectedAddressType, // Address type (Home/Office)
-        'amount': total, // Total amount fetched from the cart
-        'date': createdAtDate, // Date when the transaction was created
-        'time': createdAtTime, // Time when the transaction was created
-        'userId': userId, // Add the user ID field that corresponds to the users collection
+        'name': _nameController.text,
+        'phone': _phoneController.text,
+        'address': _addressController.text,
+        'paymentMethod': refundOption,
+        'amount': total,
+        'date': createdAtDate,
+        'time': createdAtTime,
+        'userId': userId,
       });
 
-      // Save the transaction ID in the transactionsId collection
       await FirebaseFirestore.instance
           .collection('transactionsId')
-          .doc('$newId') // Using newId as the document ID
+          .doc('$newId')
           .set({
         'transactionId': newId,
-        'createdAt': FieldValue.serverTimestamp(), // To keep track of creation time
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Transaction saved successfully')),
       );
 
-      print('Transaction ID: $newId'); // Print the newly created transaction ID
+      // After saving the transaction, clear the user's cart
+      await _clearCart();
 
+      print('Transaction ID: $newId');
     } catch (e) {
       print('Error saving transaction: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving transaction: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _clearCart() async {
+    try {
+      QuerySnapshot cartSnapshot = await FirebaseFirestore.instance
+          .collection('cart')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      for (DocumentSnapshot doc in cartSnapshot.docs) {
+        await doc.reference.delete(); // Deletes each document from the cart collection
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cart cleared successfully')),
+      );
+    } catch (e) {
+      print('Error clearing cart: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error clearing cart: ${e.toString()}')),
       );
     }
   }
@@ -150,32 +199,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         child: Column(
           children: [
             Image.asset(
-              'assets/pickup_image.png', // Replace with your image asset path
+              'assets/pickup_image.png',
               height: 100,
             ),
             const SizedBox(height: 20),
             _buildEditableTextField('Name', _nameController),
             _buildEditableTextField('Phone No', _phoneController),
             _buildEditableTextField('Address', _addressController),
-            const SizedBox(height: 10),
-            const Text(
-              'Address type',
-              style: TextStyle(fontSize: 14),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildAddressTypeOption('Home'),
-                _buildAddressTypeOption('Office'),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Payment Method',
-              style: TextStyle(fontSize: 14),
-            ),
-            _buildPaymentOption('Cash on Delivery'),
-            _buildPaymentOption('Online Payment'),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -183,7 +213,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
               ),
               onPressed: () {
-                _fetchCartTotal().then((_) => _saveTransaction()); // Fetch total and then save transaction
+                _fetchCartTotal().then((_) {
+                  _saveTransaction().then((_) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => MyApp()),
+                    );
+                  });
+                });
               },
               child: const Text('Submit', style: TextStyle(color: Colors.white)),
             ),
@@ -203,36 +240,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           border: const UnderlineInputBorder(),
         ),
       ),
-    );
-  }
-
-  Widget _buildAddressTypeOption(String label) {
-    return Row(
-      children: [
-        Radio<String>(
-          value: label,
-          groupValue: _selectedAddressType,
-          onChanged: (String? value) {
-            setState(() {
-              _selectedAddressType = value!; // Update the selected address type
-            });
-          },
-        ),
-        Text(label, style: const TextStyle(fontSize: 16)),
-      ],
-    );
-  }
-
-  Widget _buildPaymentOption(String label) {
-    return RadioListTile<String>(
-      title: Text(label),
-      value: label,
-      groupValue: refundOption, // Use refundOption to manage selection
-      onChanged: (value) {
-        setState(() {
-          refundOption = value!; // Update the selected payment method
-        });
-      },
     );
   }
 }

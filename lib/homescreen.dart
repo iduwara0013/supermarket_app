@@ -10,6 +10,7 @@ import 'shopping_cart.dart';
 import 'setting.dart';
 import 'category.dart';
 import 'fresco_registration.dart'; // Import the Fresco Registration page
+import 'snacks.dart';
 
 void main() {
   runApp(const MyApp());
@@ -234,8 +235,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     CategoryCard('Grocery', 'assets/grocery1.png', GroceryPage()),
                     CategoryCard('Frozen Foods', 'assets/frozen1.png', const FrozonPage()),
-                    CategoryCard('Beverage', 'assets/beverages1.png', BeverageScreen()),
-                    CategoryCard('Snacks', 'assets/snacks1.png', null),
+                    CategoryCard('Beverage', 'assets/beverages1.png', BeveragesScreen()),
+                    CategoryCard('Snacks', 'assets/snacks1.png', SnacksPage()),
                     CategoryCard('Meats & Seafood', 'assets/meats1.png', null),
                     CategoryCard('Health & Wellness', 'assets/health1.png', null),
                     CategoryCard('Bakery Products', 'assets/bakery1.png', null),
