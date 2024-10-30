@@ -12,7 +12,7 @@ class ShoppingCartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: const Color.fromARGB(255, 58, 104, 16),
         title: Text('Shopping Cart'),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),

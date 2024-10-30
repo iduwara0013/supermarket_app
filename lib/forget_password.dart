@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'changepassword.dart';
+import 'login_screen.dart'; // Import your login screen
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});
@@ -11,25 +11,22 @@ class ForgetPasswordScreen extends StatefulWidget {
 
 class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
-  bool _otpSent = false;
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _emailSent = false;
 
-  void _sendOtp() async {
+  void _sendPasswordResetEmail() async {
     final String email = _emailController.text.trim();
 
     try {
-      // Send password reset email (This acts as an OTP sender in Firebase's case)
+      // Send password reset email
       await _auth.sendPasswordResetEmail(email: email);
-
       setState(() {
-        _otpSent = true;
+        _emailSent = true; // Update state to indicate the email was sent
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('OTP sent to $email'),
+          content: Text('Password reset email sent to $email'),
         ),
       );
     } catch (e) {
@@ -41,16 +38,11 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
     }
   }
 
-  void _verifyOtp() {
-    final String otp = _otpController.text.trim();
-    
-    // Since Firebase doesn't use OTP directly, you'll typically verify with the email link
-    // In this case, you'd be validating the email reset link
-    // For demo purposes, let's assume OTP is correct and navigate to the next screen
-    
+  void _navigateToLogin() {
+    // Navigate to login screen after the password has been changed
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => ChangePasswordScreen(email: _emailController.text)),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
@@ -63,47 +55,42 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child : Center(
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (_otpSent)
+        child: Center(
+          child: Column(
+            children: [
               TextField(
-                controller: _otpController,
+                controller: _emailController,
                 decoration: InputDecoration(
-                  labelText: 'Enter OTP',
+                  labelText: 'Email',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _otpSent ? _verifyOtp : _sendOtp,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  if (_emailSent) {
+                    _navigateToLogin(); // Navigate to login if email was sent
+                  } else {
+                    _sendPasswordResetEmail(); // Send reset email
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 15),
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                ),
+                child: Text(
+                  _emailSent ? 'Back to Login' : 'Send Password Reset Email',
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
-              child: Text(
-                _otpSent ? 'Verify OTP' : 'Send OTP',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

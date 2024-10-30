@@ -4,20 +4,19 @@ import 'shopping_cart.dart' as shoppingCart; // Prefix for avoiding ambiguity
 
 void main() {
   runApp(MaterialApp(
-    home: FrozonPage(),
+    home: BakeryProductsPage(),
   ));
 }
 
-class FrozonPage extends StatefulWidget {
+class BakeryProductsPage extends StatefulWidget {
   @override
-  _FrozonPageState createState() => _FrozonPageState();
+  _BakeryProductsPageState createState() => _BakeryProductsPageState();
 }
 
-class _FrozonPageState extends State<FrozonPage> {
+class _BakeryProductsPageState extends State<BakeryProductsPage> {
   String selectedCategory = 'All';
   String userId = '';
   bool isLoading = true;
-  double totalPrice = 0.0; // New state variable for total price
 
   @override
   void initState() {
@@ -31,23 +30,6 @@ class _FrozonPageState extends State<FrozonPage> {
       setState(() {
         userId = userSnapshot.data()?['userId'] ?? '';
       });
-      _fetchTotalPrice(); // Fetch total price after getting userId
-    }
-  }
-
-  Future<void> _fetchTotalPrice() async {
-    if (userId.isNotEmpty) {
-      var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
-      var cartSnapshot = await cartDocRef.get();
-      if (cartSnapshot.exists) {
-        var totalPriceData = cartSnapshot.data()?['totalPrice'];
-        if (totalPriceData is String) {
-          totalPrice = double.tryParse(totalPriceData) ?? 0.0;
-        } else if (totalPriceData is num) {
-          totalPrice = totalPriceData.toDouble();
-        }
-        setState(() {}); // Update state to refresh UI with the total price
-      }
     }
   }
 
@@ -59,10 +41,10 @@ class _FrozonPageState extends State<FrozonPage> {
         leading: const Icon(Icons.menu, color: Colors.white),
         title: const Text('Green Mart', style: TextStyle(color: Colors.white)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
             child: Center(
-              child: Text('Rs.${totalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)), // Updated to show dynamic total price
+              child: Text('Rs.900.00', style: TextStyle(color: Colors.white)),
             ),
           ),
           IconButton(
@@ -92,21 +74,18 @@ class _FrozonPageState extends State<FrozonPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                        CategoryButton(text: 'Ice Cream', selected: selectedCategory == 'Ice Cream', onTap: () => _selectCategory('Ice Cream')),
-                        CategoryButton(text: 'Sausages', selected: selectedCategory == 'Sausages', onTap: () => _selectCategory('Sausages')),
-                        CategoryButton(text: 'Ham', selected: selectedCategory == 'Ham', onTap: () => _selectCategory('Ham')),
-                      ],
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
+                      CategoryButton(text: 'Short-Eats', selected: selectedCategory == 'Short-Eats', onTap: () => _selectCategory('Short-Eats')),
+                      CategoryButton(text: 'Cakes', selected: selectedCategory == 'Cakes', onTap: () => _selectCategory('Cakes')),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: StreamBuilder(
-                    stream: FirebaseFirestore.instance.collection('frozenfoods').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('bakeryproducts').snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
@@ -138,7 +117,7 @@ class _FrozonPageState extends State<FrozonPage> {
                               name: product['productName'],
                               price: 'Rs ${product['finalPrice']}',
                               company: product['company'] ?? 'Unknown',
-                              stockCount: product['inStockMonth']['totalStock'] ?? 0,
+                              stockCount: product['inStockMonth']['totalStock'] ?? 0, // Access totalStock directly
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
@@ -208,12 +187,10 @@ class _FrozonPageState extends State<FrozonPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(-1),
+    int currentMonth = DateTime.now().month;
+    await FirebaseFirestore.instance.collection('bakeryproducts').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(-1), // Decrease stock count directly
     });
-
-    // Update the displayed total price
-    _fetchTotalPrice(); // Fetch total price after adding
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
@@ -257,12 +234,10 @@ class _FrozonPageState extends State<FrozonPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(1),
+    int currentMonth = DateTime.now().month;
+    await FirebaseFirestore.instance.collection('bakeryproducts').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(1), // Increase stock count directly
     });
-
-    // Update the displayed total price
-    _fetchTotalPrice(); // Fetch total price after removing
   }
 }
 
@@ -280,20 +255,17 @@ class CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: selected ? Colors.white : Colors.black,
-          backgroundColor: selected ? Colors.green : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            side: const BorderSide(color: Colors.green),
-          ),
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: selected ? Colors.white : Colors.black,
+        backgroundColor: selected ? Colors.green : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: const BorderSide(color: Colors.green),
         ),
-        onPressed: onTap,
-        child: Text(text),
       ),
+      onPressed: onTap,
+      child: Text(text),
     );
   }
 }
@@ -326,7 +298,6 @@ class ProductItem extends StatelessWidget {
       elevation: 5,
       margin: const EdgeInsets.all(8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
           Expanded(
@@ -386,7 +357,7 @@ class ProductDetailPage extends StatelessWidget {
             const SizedBox(height: 8.0),
             Text('Company: ${product['company'] ?? 'Unknown'}'),
             const SizedBox(height: 8.0),
-            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'),
+            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'), // Get total stock directly
             const SizedBox(height: 8.0),
             ElevatedButton(
               onPressed: () {

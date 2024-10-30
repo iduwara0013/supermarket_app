@@ -30,6 +30,8 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
   String? _imgUrl;
   String _membershipStatus = 'Not Registered';
 
+  final _formKey = GlobalKey<FormState>();
+
   @override
   void initState() {
     super.initState();
@@ -144,6 +146,11 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
       return;
     }
 
+    if (!_formKey.currentState!.validate()) {
+      // Don't proceed if the form is not valid
+      return;
+    }
+
     try {
       Map<String, dynamic> updatedData = {
         'firstName': _firstNameController.text,
@@ -173,7 +180,7 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
   void _navigateToFrescoRegistration() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => FrescoRegistration()),
+      MaterialPageRoute(builder: (context) => const FrescoRegistration()),
     );
   }
 
@@ -195,37 +202,40 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    Center(
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundImage: _imgUrl != null
-                              ? NetworkImage(_imgUrl!)
-                              : const AssetImage('assets/clipboard.png') as ImageProvider,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      Center(
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundImage: _imgUrl != null
+                                ? NetworkImage(_imgUrl!)
+                                : const AssetImage('assets/clipboard.png') as ImageProvider,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 30),
-                    _buildProfileItem('First Name', _firstNameController),
-                    const SizedBox(height: 20),
-                    _buildProfileItem('Last Name', _lastNameController),
-                    const SizedBox(height: 20),
-                    _buildProfileItem('Email', _emailController),
-                    const SizedBox(height: 20),
-                    _buildProfileItem('Phone No', _phoneController, isPhone: true),
-                    const SizedBox(height: 20),
-                    _buildNicField(),
-                    const SizedBox(height: 20),
-                    _buildProfileItem('Address', _addressController),
-                    const SizedBox(height: 20),
-                    _buildMembershipItem(),
-                    const SizedBox(height: 40),
-                  ],
+                      const SizedBox(height: 30),
+                      _buildProfileItem('First Name', _firstNameController),
+                      const SizedBox(height: 20),
+                      _buildProfileItem('Last Name', _lastNameController),
+                      const SizedBox(height: 20),
+                      _buildProfileItem('Email', _emailController),
+                      const SizedBox(height: 20),
+                      _buildProfileItem('Phone No', _phoneController, isPhone: true),
+                      const SizedBox(height: 20),
+                      _buildNicField(),
+                      const SizedBox(height: 20),
+                      _buildProfileItem('Address', _addressController),
+                      const SizedBox(height: 20),
+                      _buildMembershipItem(),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
       ),
@@ -245,7 +255,7 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
           inputFormatters: isPhone
@@ -257,46 +267,71 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
           ),
+          validator: isPhone
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your phone number';
+                  } else if (value.length != 10) {
+                    return 'Phone number must be exactly 10 digits';
+                  }
+                  return null;
+                }
+              : null,
         ),
       ],
     );
   }
 
   Widget _buildNicField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'NIC No',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'NIC No',
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _nicController,
-          keyboardType: TextInputType.text,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9Vv]')),
-            LengthLimitingTextInputFormatter(12),
-          ],
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'New NIC: 12 digits, Old NIC: 8 digits followed by "V"',
-          ),
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: _nicController,
+        keyboardType: TextInputType.text,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9Vv]')),
+          LengthLimitingTextInputFormatter(12), // Max length of 12 characters
+        ],
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          hintText: 'New NIC: 12 digits, Old NIC: 9 digits + V/v',
         ),
-      ],
-    );
-  }
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'NIC cannot be empty';
+          }
+
+          // Regular expression for NIC: 12 digits or 9 digits + 'V' or 'v'
+          RegExp nicRegExp = RegExp(r'^(\d{12}|\d{9}[Vv])$');
+          
+          if (!nicRegExp.hasMatch(value)) {
+            return 'Invalid NIC format';
+          }
+
+          return null;
+        },
+      ),
+    ],
+  );
+}
+
 
   Widget _buildMembershipItem() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Membership Status',
+          'Membership',
           style: TextStyle(
             fontSize: 16,
             color: Colors.black,
@@ -305,26 +340,14 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () {
-            if (_membershipStatus == 'Not Registered') {
-              _navigateToFrescoRegistration();
-            }
-          },
-          child: Row(
-            children: [
-              Text(
-                _membershipStatus,
-                style: TextStyle(
-                  color: _membershipStatus == 'Not Registered' ? Colors.red : Colors.green,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (_membershipStatus == 'Not Registered') ...[
-                const SizedBox(width: 10),
-                const Icon(Icons.arrow_forward, color: Colors.red),
-              ],
-            ],
+          onTap: _navigateToFrescoRegistration,
+          child: Text(
+            _membershipStatus,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.blue,
+              decoration: TextDecoration.underline,
+            ),
           ),
         ),
       ],

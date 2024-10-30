@@ -4,20 +4,19 @@ import 'shopping_cart.dart' as shoppingCart; // Prefix for avoiding ambiguity
 
 void main() {
   runApp(MaterialApp(
-    home: FrozonPage(),
+    home: HealthPage(),
   ));
 }
 
-class FrozonPage extends StatefulWidget {
+class HealthPage extends StatefulWidget {
   @override
-  _FrozonPageState createState() => _FrozonPageState();
+  _HealthPageState createState() => _HealthPageState();
 }
 
-class _FrozonPageState extends State<FrozonPage> {
+class _HealthPageState extends State<HealthPage> {
   String selectedCategory = 'All';
   String userId = '';
   bool isLoading = true;
-  double totalPrice = 0.0; // New state variable for total price
 
   @override
   void initState() {
@@ -31,23 +30,6 @@ class _FrozonPageState extends State<FrozonPage> {
       setState(() {
         userId = userSnapshot.data()?['userId'] ?? '';
       });
-      _fetchTotalPrice(); // Fetch total price after getting userId
-    }
-  }
-
-  Future<void> _fetchTotalPrice() async {
-    if (userId.isNotEmpty) {
-      var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
-      var cartSnapshot = await cartDocRef.get();
-      if (cartSnapshot.exists) {
-        var totalPriceData = cartSnapshot.data()?['totalPrice'];
-        if (totalPriceData is String) {
-          totalPrice = double.tryParse(totalPriceData) ?? 0.0;
-        } else if (totalPriceData is num) {
-          totalPrice = totalPriceData.toDouble();
-        }
-        setState(() {}); // Update state to refresh UI with the total price
-      }
     }
   }
 
@@ -59,10 +41,10 @@ class _FrozonPageState extends State<FrozonPage> {
         leading: const Icon(Icons.menu, color: Colors.white),
         title: const Text('Green Mart', style: TextStyle(color: Colors.white)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+          const Padding(
+            padding: EdgeInsets.only(right: 8.0),
             child: Center(
-              child: Text('Rs.${totalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)), // Updated to show dynamic total price
+              child: Text('Rs.900.00', style: TextStyle(color: Colors.white)),
             ),
           ),
           IconButton(
@@ -92,21 +74,20 @@ class _FrozonPageState extends State<FrozonPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                        CategoryButton(text: 'Ice Cream', selected: selectedCategory == 'Ice Cream', onTap: () => _selectCategory('Ice Cream')),
-                        CategoryButton(text: 'Sausages', selected: selectedCategory == 'Sausages', onTap: () => _selectCategory('Sausages')),
-                        CategoryButton(text: 'Ham', selected: selectedCategory == 'Ham', onTap: () => _selectCategory('Ham')),
-                      ],
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
+                      CategoryButton(text: 'Soap & Shampoo', selected: selectedCategory == 'Soap & Shampoo', onTap: () => _selectCategory('Soap & Shampoo')),
+                      CategoryButton(text: 'Face Wash Products', selected: selectedCategory == 'Face Wash Products', onTap: () => _selectCategory('Face Wash Products')),
+                      //CategoryButton(text: 'Medicines', selected: selectedCategory == 'Medicines', onTap: () => _selectCategory('Medicines')),
+                     // CategoryButton(text: 'Vitamins', selected: selectedCategory == 'Vitamins', onTap: () => _selectCategory('Vitamins')),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: StreamBuilder(
-                    stream: FirebaseFirestore.instance.collection('frozenfoods').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('health&wellness').snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
@@ -138,7 +119,7 @@ class _FrozonPageState extends State<FrozonPage> {
                               name: product['productName'],
                               price: 'Rs ${product['finalPrice']}',
                               company: product['company'] ?? 'Unknown',
-                              stockCount: product['inStockMonth']['totalStock'] ?? 0,
+                              stockCount: product['inStockMonth']['totalStock'] ?? 0, // Access totalStock directly
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
@@ -207,13 +188,9 @@ class _FrozonPageState extends State<FrozonPage> {
       'totalPrice': totalPrice,
     }, SetOptions(merge: true));
 
-    // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(-1),
+    await FirebaseFirestore.instance.collection('health&wellness').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(-1), // Decrease stock count directly
     });
-
-    // Update the displayed total price
-    _fetchTotalPrice(); // Fetch total price after adding
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
@@ -256,13 +233,9 @@ class _FrozonPageState extends State<FrozonPage> {
       'totalPrice': totalPrice,
     }, SetOptions(merge: true));
 
-    // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(1),
+    await FirebaseFirestore.instance.collection('health&wellness').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(1), // Increase stock count directly
     });
-
-    // Update the displayed total price
-    _fetchTotalPrice(); // Fetch total price after removing
   }
 }
 
@@ -280,20 +253,17 @@ class CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: selected ? Colors.white : Colors.black,
-          backgroundColor: selected ? Colors.green : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            side: const BorderSide(color: Colors.green),
-          ),
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: selected ? Colors.white : Colors.black,
+        backgroundColor: selected ? Colors.green : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: const BorderSide(color: Colors.green),
         ),
-        onPressed: onTap,
-        child: Text(text),
       ),
+      onPressed: onTap,
+      child: Text(text),
     );
   }
 }
@@ -326,23 +296,61 @@ class ProductItem extends StatelessWidget {
       elevation: 5,
       margin: const EdgeInsets.all(8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start, // Align children to the top
         children: [
-          Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
-          Expanded(
+          // Product image
+          Image.network(
+            imageUrl,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+          ),
+          const SizedBox(width: 8), // Add space between image and text
+          // Text section
+          Expanded( // Use Expanded to take the remaining space
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text(company),
-                  Text(price, style: const TextStyle(color: Colors.green)),
-                  Text('Stock: $stockCount', style: const TextStyle(color: Colors.red)),
+                  // Product name with overflow handling
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.0,
+                    ),
+                    overflow: TextOverflow.ellipsis, // Handle long text
+                    maxLines: 1, // Show only 1 line
+                  ),
+                  // Company name with overflow handling
+                  Text(
+                    company,
+                    style: const TextStyle(fontSize: 14.0),
+                    overflow: TextOverflow.ellipsis, // Handle long text
+                    maxLines: 1,
+                  ),
+                  // Product price
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 16.0,
+                    ),
+                  ),
+                  // Stock count
+                  Text(
+                    'Stock: $stockCount',
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 14.0,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
+          // Add/remove buttons
           Column(
             children: [
               IconButton(
@@ -386,7 +394,7 @@ class ProductDetailPage extends StatelessWidget {
             const SizedBox(height: 8.0),
             Text('Company: ${product['company'] ?? 'Unknown'}'),
             const SizedBox(height: 8.0),
-            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'),
+            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'), // Get total stock directly
             const SizedBox(height: 8.0),
             ElevatedButton(
               onPressed: () {

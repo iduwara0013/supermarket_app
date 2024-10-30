@@ -4,16 +4,16 @@ import 'shopping_cart.dart' as shoppingCart; // Prefix for avoiding ambiguity
 
 void main() {
   runApp(MaterialApp(
-    home: FrozonPage(),
+    home: MeatsSeafoodPage(),
   ));
 }
 
-class FrozonPage extends StatefulWidget {
+class  MeatsSeafoodPage extends StatefulWidget {
   @override
-  _FrozonPageState createState() => _FrozonPageState();
+  _MeatsSeafoodState createState() => _MeatsSeafoodState();
 }
 
-class _FrozonPageState extends State<FrozonPage> {
+class _MeatsSeafoodState extends State<MeatsSeafoodPage> {
   String selectedCategory = 'All';
   String userId = '';
   bool isLoading = true;
@@ -97,8 +97,8 @@ class _FrozonPageState extends State<FrozonPage> {
                     child: Row(
                       children: [
                         CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                        CategoryButton(text: 'Ice Cream', selected: selectedCategory == 'Ice Cream', onTap: () => _selectCategory('Ice Cream')),
-                        CategoryButton(text: 'Sausages', selected: selectedCategory == 'Sausages', onTap: () => _selectCategory('Sausages')),
+                        CategoryButton(text: 'Beef', selected: selectedCategory == 'Beef', onTap: () => _selectCategory('Beef')),
+                        CategoryButton(text: 'Chicken', selected: selectedCategory == 'Chicken', onTap: () => _selectCategory('Chicken')),
                         CategoryButton(text: 'Ham', selected: selectedCategory == 'Ham', onTap: () => _selectCategory('Ham')),
                       ],
                     ),
@@ -106,7 +106,7 @@ class _FrozonPageState extends State<FrozonPage> {
                 ),
                 Expanded(
                   child: StreamBuilder(
-                    stream: FirebaseFirestore.instance.collection('frozenfoods').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('meats&seafoods').snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
@@ -208,7 +208,7 @@ class _FrozonPageState extends State<FrozonPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
+    await FirebaseFirestore.instance.collection('meats&seafoods').doc(product['id']).update({
       'inStockMonth.totalStock': FieldValue.increment(-1),
     });
 
@@ -257,7 +257,7 @@ class _FrozonPageState extends State<FrozonPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
+    await FirebaseFirestore.instance.collection('meats&seafoods').doc(product['id']).update({
       'inStockMonth.totalStock': FieldValue.increment(1),
     });
 

@@ -1,186 +1,393 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'shopping_cart.dart' as shoppingCart;
 
-class BeveragesScreen extends StatelessWidget {
+void main() {
+  runApp(MaterialApp(
+    home: BeveragesScreen(),
+  ));
+}
+
+class BeveragesScreen extends StatefulWidget {
+  @override
+  _BeveragesScreenState createState() => _BeveragesScreenState();
+}
+
+class _BeveragesScreenState extends State<BeveragesScreen> {
+  String selectedCategory = 'All';
+  String userId = '';
+  TextEditingController searchController = TextEditingController();
+  String searchQuery = '';
+   double totalPrice = 0.0; // New state variable for total price
+    bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserId();
+     searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      searchQuery = searchController.text.toLowerCase();
+    });
+  }
+   @override
+  void dispose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchUserId() async {
+    var userSnapshot = await FirebaseFirestore.instance.collection('current_user').doc('current').get();
+    if (userSnapshot.exists) {
+      setState(() {
+        userId = userSnapshot.data()?['userId'] ?? '';
+      });
+      _fetchTotalPrice(); // Fetch total price after getting userId
+    }
+  }
+
+  Future<void> _fetchTotalPrice() async {
+    if (userId.isNotEmpty) {
+      var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+      var cartSnapshot = await cartDocRef.get();
+      if (cartSnapshot.exists) {
+        var totalPriceData = cartSnapshot.data()?['totalPrice'];
+        if (totalPriceData is String) {
+          totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+        } else if (totalPriceData is num) {
+          totalPrice = totalPriceData.toDouble();
+        }
+        setState(() {}); // Update state to refresh UI with the total price
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(Icons.menu),
-            Row(
-              children: [
-                Icon(Icons.shopping_cart),
-                SizedBox(width: 10),
-                Text('Rs.5000.00'),
-                SizedBox(width: 20),
-                Icon(Icons.person),
-              ],
+        leading: const Icon(Icons.menu, color: Colors.white),
+        title: const Text('Green Mart', style: TextStyle(color: Colors.white)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Center(
+              child: Text('Rs.${totalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)), // Updated to show dynamic total price
             ),
-          ],
-        ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.shopping_cart, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => shoppingCart.ShoppingCartPage()),
+              );
+            },
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search bar
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'What do you want?',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
+       body: userId.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'What are you looking for',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-            ),
-            SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
+                      CategoryButton(text: 'Juice', selected: selectedCategory == 'Juice', onTap: () => _selectCategory('Juice')),
+                      CategoryButton(text: 'Soft Drinks', selected: selectedCategory == 'Soft Drinks', onTap: () => _selectCategory('Soft Drinks')),
+                      CategoryButton(text: 'Water', selected: selectedCategory == 'Water', onTap: () => _selectCategory('Water')),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('beverages').snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-            // Category filter
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildCategoryButton("All", isSelected: true),
-                  _buildCategoryButton("Juice"),
-                  _buildCategoryButton("Malt"),
-                  _buildCategoryButton("Tea"),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
+                      var products = snapshot.data!.docs;
+                      var filteredProducts = products.where((product) {
+                        var productName = product['productName'].toString().toLowerCase();
+                        var matchesCategory = selectedCategory == 'All' || product['subCategory'] == selectedCategory;
+                        var matchesSearch = productName.contains(searchQuery);
 
-            // Fetching data from Firestore
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('beverages').snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(child: CircularProgressIndicator());
-                  }
+                        return matchesCategory && matchesSearch;
+                      }).toList();
 
-                  final beverages = snapshot.data!.docs;
-                  return ListView.builder(
-                    itemCount: beverages.length,
-                    itemBuilder: (context, index) {
-                      var beverage = beverages[index];
-                      return _buildBeverageItem(
-                        name: beverage['productName'],
-                        price: beverage['finalPrice'],
-                        imageUrl: beverage['productImage'], // Fetching image URL from Firestore
-                        availableQuantity: beverage['stock'],
+                      return ListView.builder(
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          var product = filteredProducts[index].data() as Map<String, dynamic>;
+                          product['id'] = filteredProducts[index].id;
+
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => ProductDetailPage(product: product)),
+                              );
+                            },
+                            child: ProductItem(
+                              imageUrl: product['productImage'] ?? '',
+                              name: product['productName'] ?? 'Unknown',
+                              price: 'Rs ${product['finalPrice'] ?? '0.00' }',
+                              product: product,
+                              onAdd: () => addToCart(product),
+                              onRemove: () => removeFromCart(product),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  void _selectCategory(String category) {
+    setState(() {
+      selectedCategory = category;
+    });
+  }
+
+ Future<void> addToCart(Map<String, dynamic> product) async {
+    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+
+    var cartSnapshot = await cartDocRef.get();
+    List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+
+    double totalPrice = 0.0;
+    var totalPriceData = cartSnapshot.data()?['totalPrice'];
+    if (totalPriceData is String) {
+      totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+    } else if (totalPriceData is num) {
+      totalPrice = totalPriceData.toDouble();
+    }
+
+    double productPrice = 0.0;
+    var finalPrice = product['finalPrice'];
+    if (finalPrice is String) {
+      productPrice = double.tryParse(finalPrice) ?? 0.0;
+    } else if (finalPrice is num) {
+      productPrice = finalPrice.toDouble();
+    }
+
+    bool itemExists = false;
+    for (var item in cartItems) {
+      if (item['name'] == product['productName']) {
+        item['quantity']++;
+        totalPrice += productPrice;
+        itemExists = true;
+        break;
+      }
+    }
+
+    if (!itemExists) {
+      cartItems.add({
+        'category': product['productCategory'],
+        'name': product['productName'],
+        'price': productPrice,
+        'quantity': 1,
+      });
+      totalPrice += productPrice;
+    }
+
+    await cartDocRef.set({
+      'items': cartItems,
+      'totalPrice': totalPrice,
+    }, SetOptions(merge: true));
+
+    // Update stock for the current month without creating a new field
+    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(-1),
+    });
+
+    // Update the displayed total price
+    _fetchTotalPrice(); // Fetch total price after adding
+  }
+
+  Future<void> removeFromCart(Map<String, dynamic> product) async {
+    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+
+    try {
+      var cartSnapshot = await cartDocRef.get();
+      List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+      double totalPrice = (cartSnapshot.data()?['totalPrice'] is num)
+          ? (cartSnapshot.data()?['totalPrice'] as num).toDouble()
+          : 0.0;
+
+      double productPrice = (product['finalPrice'] is num)
+          ? (product['finalPrice'] as num).toDouble()
+          : 0.0;
+
+      for (var item in cartItems) {
+        if (item['name'] == product['productName']) {
+          if (item['quantity'] > 1) {
+            item['quantity']--;
+            totalPrice -= productPrice;
+          } else {
+            totalPrice -= productPrice;
+            cartItems.remove(item);
+          }
+          break;
+        }
+      }
+
+      await cartDocRef.set({
+        'items': cartItems,
+        'totalPrice': totalPrice,
+      }, SetOptions(merge: true));
+
+      await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
+        'inStockMonth.totalStock': FieldValue.increment(1),
+      });
+    } catch (e) {
+      print("Error removing from cart: $e");
+    }
+  }
+}
+
+class CategoryButton extends StatelessWidget {
+  final String text;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const CategoryButton({
+    super.key,
+    required this.text,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: selected ? Colors.white : Colors.black,
+        backgroundColor: selected ? Colors.green : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: const BorderSide(color: Colors.green),
+        ),
+      ),
+      onPressed: onTap,
+      child: Text(text),
+    );
+  }
+}
+
+class ProductItem extends StatelessWidget {
+  final String imageUrl;
+  final String name;
+  final String price;
+  final Map<String, dynamic> product;
+  final VoidCallback onAdd;
+  final VoidCallback onRemove;
+
+  const ProductItem({
+    super.key,
+    required this.imageUrl,
+    required this.name,
+    required this.price,
+    required this.product,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 5,
+      margin: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(price, style: const TextStyle(color: Colors.green)),
+                  Text(product['quantityType'] ?? 'Unknown'),  // Show value only
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Method to build category buttons
-  Widget _buildCategoryButton(String title, {bool isSelected = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isSelected ? Colors.green[100] : Colors.grey[200],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
           ),
-        ),
-        onPressed: () {},
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.green : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Method to build each beverage item row
-  Widget _buildBeverageItem({required String name, required double price, required String imageUrl, required int availableQuantity}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
             children: [
-              // Product Image loaded from Firestore URL
-              Image.network(
-                imageUrl,
-                height: 80,
-                width: 80,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: onAdd,
               ),
-              SizedBox(width: 20),
-              
-              // Product Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Rs. ${price.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.green,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      '$availableQuantity Item Available',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Add/Remove buttons
-              Column(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.add_circle, color: Colors.green),
-                  ),
-                  SizedBox(height: 10),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(Icons.remove_circle, color: Colors.red),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: onRemove,
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProductDetailPage extends StatelessWidget {
+  final Map<String, dynamic> product;
+
+  const ProductDetailPage({super.key, required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(product['productName'] ?? 'Product Details'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.network(product['productImage'] ?? ''),
+            const SizedBox(height: 16.0),
+            Text(
+              'Price: Rs ${product['finalPrice'] ?? '0.00'}',
+              style: const TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8.0),
+            Text(product['quantityType'] ?? 'Unknown'),  // Show value only
+            const SizedBox(height: 8.0),
+            ElevatedButton(
+              onPressed: () {
+                // Logic to add to cart can be implemented here
+              },
+              child: const Text('Add to Cart'),
+            ),
+          ],
         ),
       ),
     );

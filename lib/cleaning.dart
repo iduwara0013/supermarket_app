@@ -17,6 +17,7 @@ class _GroceryPageState extends State<GroceryPage> {
   String selectedCategory = 'All';
   String userId = '';
   bool isLoading = true;
+  double totalPrice = 0.0; // New state variable for total price
 
   @override
   void initState() {
@@ -30,6 +31,23 @@ class _GroceryPageState extends State<GroceryPage> {
       setState(() {
         userId = userSnapshot.data()?['userId'] ?? '';
       });
+      _fetchTotalPrice(); // Fetch total price after getting userId
+    }
+  }
+
+  Future<void> _fetchTotalPrice() async {
+    if (userId.isNotEmpty) {
+      var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+      var cartSnapshot = await cartDocRef.get();
+      if (cartSnapshot.exists) {
+        var totalPriceData = cartSnapshot.data()?['totalPrice'];
+        if (totalPriceData is String) {
+          totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+        } else if (totalPriceData is num) {
+          totalPrice = totalPriceData.toDouble();
+        }
+        setState(() {}); // Update state to refresh UI with the total price
+      }
     }
   }
 
@@ -41,10 +59,10 @@ class _GroceryPageState extends State<GroceryPage> {
         leading: const Icon(Icons.menu, color: Colors.white),
         title: const Text('Green Mart', style: TextStyle(color: Colors.white)),
         actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8.0),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
             child: Center(
-              child: Text('Rs.900.00', style: TextStyle(color: Colors.white)),
+              child: Text('Rs.${totalPrice.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white)), // Updated to show dynamic total price
             ),
           ),
           IconButton(
@@ -74,13 +92,21 @@ class _GroceryPageState extends State<GroceryPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                      CategoryButton(text: 'Flour', selected: selectedCategory == 'Flour', onTap: () => _selectCategory('Flour')),
-                      CategoryButton(text: 'Sugar', selected: selectedCategory == 'Sugar', onTap: () => _selectCategory('Sugar')),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
+                        CategoryButton(text: 'Flour', selected: selectedCategory == 'Flour', onTap: () => _selectCategory('Flour')),
+                        CategoryButton(text: 'Sugar', selected: selectedCategory == 'Sugar', onTap: () => _selectCategory('Sugar')),
+                        CategoryButton(text: 'Noodles', selected: selectedCategory == 'Noodles', onTap: () => _selectCategory('Noodles')),
+                        CategoryButton(text: 'Pasta', selected: selectedCategory == 'Pasta', onTap: () => _selectCategory('Pasta')),
+                        CategoryButton(text: 'Rice', selected: selectedCategory == 'Rice', onTap: () => _selectCategory('Rice')),
+                        CategoryButton(text: 'Oil', selected: selectedCategory == 'Oil', onTap: () => _selectCategory('Oil')),
+                        CategoryButton(text: 'Bread', selected: selectedCategory == 'Bread', onTap: () => _selectCategory('Bread')),
+                        CategoryButton(text: 'Jam', selected: selectedCategory == 'Jam', onTap: () => _selectCategory('Jam')),
+                      ],
+                    ),
                   ),
                 ),
                 Expanded(
@@ -117,7 +143,7 @@ class _GroceryPageState extends State<GroceryPage> {
                               name: product['productName'],
                               price: 'Rs ${product['finalPrice']}',
                               company: product['company'] ?? 'Unknown',
-                              stockCount: product['inStockMonth']['totalStock'] ?? 0, // Access totalStock directly
+                              stockCount: product['inStockMonth']['totalStock'] ?? 0,
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
@@ -187,10 +213,12 @@ class _GroceryPageState extends State<GroceryPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    int currentMonth = DateTime.now().month;
     await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(-1), // Decrease stock count directly
+      'inStockMonth.totalStock': FieldValue.increment(-1),
     });
+
+    // Update the displayed total price
+    _fetchTotalPrice(); // Fetch total price after adding
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
@@ -234,10 +262,12 @@ class _GroceryPageState extends State<GroceryPage> {
     }, SetOptions(merge: true));
 
     // Update stock for the current month without creating a new field
-    int currentMonth = DateTime.now().month;
     await FirebaseFirestore.instance.collection('grocery').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(1), // Increase stock count directly
+      'inStockMonth.totalStock': FieldValue.increment(1),
     });
+
+    // Update the displayed total price
+    _fetchTotalPrice(); // Fetch total price after removing
   }
 }
 
@@ -255,17 +285,20 @@ class CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      style: TextButton.styleFrom(
-        foregroundColor: selected ? Colors.white : Colors.black,
-        backgroundColor: selected ? Colors.green : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-          side: const BorderSide(color: Colors.green),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: TextButton(
+        style: TextButton.styleFrom(
+          foregroundColor: selected ? Colors.white : Colors.black,
+          backgroundColor: selected ? Colors.green : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            side: const BorderSide(color: Colors.green),
+          ),
         ),
+        onPressed: onTap,
+        child: Text(text),
       ),
-      onPressed: onTap,
-      child: Text(text),
     );
   }
 }
@@ -298,6 +331,7 @@ class ProductItem extends StatelessWidget {
       elevation: 5,
       margin: const EdgeInsets.all(8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
           Expanded(
@@ -357,7 +391,7 @@ class ProductDetailPage extends StatelessWidget {
             const SizedBox(height: 8.0),
             Text('Company: ${product['company'] ?? 'Unknown'}'),
             const SizedBox(height: 8.0),
-            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'), // Get total stock directly
+            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'),
             const SizedBox(height: 8.0),
             ElevatedButton(
               onPressed: () {

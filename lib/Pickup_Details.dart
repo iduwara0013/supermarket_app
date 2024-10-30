@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for saving details
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Delivery.dart'; // Import your Delivery.dart file here
 import 'CardPaymentScreen.dart'; // Import CardPaymentScreen
 
@@ -16,7 +16,7 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _dateTimeController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  String? _userId;
+  String? _userId; // Store userId from 'current_user' collection
 
   @override
   void initState() {
@@ -27,7 +27,10 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
   // Fetch userId from the 'current_user' collection and user details from the 'users' collection
   Future<void> _fetchUserIdAndDetails() async {
     try {
-      final currentUserDoc = await FirebaseFirestore.instance.collection('current_user').doc('current').get();
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('current_user')
+          .doc('current')
+          .get();
       if (currentUserDoc.exists) {
         _userId = currentUserDoc.data()?['userId']; // Fetch userId
         _loadUserDetails(_userId);
@@ -43,7 +46,10 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
   Future<void> _loadUserDetails(String? userId) async {
     if (userId != null) {
       try {
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
         if (userDoc.exists) {
           var userData = userDoc.data();
           _nameController.text = userData?['name'] ?? ''; // Assuming name field exists
@@ -61,20 +67,28 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
     }
   }
 
-  // Method to save input details to Firestore
+  // Method to save input details to Firestore using userId as document ID
   Future<void> _savePickupDetails() async {
     // Validate form
     if (_nameController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _dateTimeController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill in all required fields')),
+        const SnackBar(content: Text('Please fill in all required fields')),
       );
       return;
     }
 
-    // Create a unique document ID
-    String docName = DateTime.now().millisecondsSinceEpoch.toString(); // Create a unique ID based on current time
+    // Ensure _userId is fetched before trying to save
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User ID not found')),
+      );
+      return;
+    }
+
+    // Use the fetched _userId as the document ID
+    String docId = _userId!; // This will set the document ID to the user's ID
 
     // Create a map with the input details
     Map<String, dynamic> pickupDetails = {
@@ -83,15 +97,17 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
       'dateTime': _dateTimeController.text,
       'notes': _notesController.text,
       'refundOption': _refundOption,
-      'userId': _userId, // Include userId for reference if needed
+      'userId': _userId, // Save the userId
     };
 
     try {
-      print('Document ID: $docName'); // Debugging line
-      // Save the pickup details in Firestore
-      await FirebaseFirestore.instance.collection('PickupDetails').doc(docName).set(pickupDetails);
+      // Save the pickup details in Firestore with userId as the document ID
+      await FirebaseFirestore.instance
+          .collection('PickupDetails')
+          .doc(docId)
+          .set(pickupDetails);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pickup details saved successfully.')),
+        const SnackBar(content: Text('Pickup details saved successfully.')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,17 +121,20 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
   void _onNextPressed() async {
     await _savePickupDetails(); // Save details before navigating
 
-    if (_refundOption == 'Cash on Delivery') {
+    // Navigate to the appropriate screen based on refund option
+    if (_refundOption == 'Online') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => DeliveryScreen( ), // Modify this if DeliveryScreen needs parameters
+          builder: (context) => CardPaymentScreen(docId: _userId!), // Pass docId
         ),
       );
-    } else if (_refundOption == 'Online Payment') {
+    } else {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => CardPaymentScreen(docId: '')), // Modify this if CardPaymentScreen needs parameters
+        MaterialPageRoute(
+          builder: (context) => DeliveryScreen(), // Navigate to DeliveryScreen
+        ),
       );
     }
   }
@@ -220,11 +239,11 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
                 Row(
                   children: [
                     Radio<String>(
-                      value: 'Cash on Delivery',
+                      value: 'CashOnDelivery',
                       groupValue: _refundOption,
                       onChanged: (value) {
                         setState(() {
-                          _refundOption = value!;
+                          _refundOption = value!; // Update refund option
                         });
                       },
                     ),
@@ -236,11 +255,11 @@ class _PickupDetailsScreenState extends State<PickupDetailsScreen> {
                 Row(
                   children: [
                     Radio<String>(
-                      value: 'Online Payment',
+                      value: 'Online',
                       groupValue: _refundOption,
                       onChanged: (value) {
                         setState(() {
-                          _refundOption = value!;
+                          _refundOption = value!; // Update refund option
                         });
                       },
                     ),
