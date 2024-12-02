@@ -12,7 +12,7 @@ class CardPaymentScreen extends StatefulWidget {
 }
 
 class _CardPaymentScreenState extends State<CardPaymentScreen> {
-  final _formKey = GlobalKey<FormState>(); // Global key for form
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _cardNameController = TextEditingController();
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _expiryDateController = TextEditingController();
@@ -23,53 +23,61 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Payment'),
-        backgroundColor: const Color(0xFF4CAF50),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+        title: const Text(
+          'Payment',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF4CAF50),
+        elevation: 4,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
-          key: _formKey, // Assign the form key here
+          key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Select your mode of payment',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Text(
+                'Select Payment Method',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
               ),
-              const SizedBox(height: 10),
-              _buildPaymentOption('Debit/Credit Card', true),
-              _buildPaymentOption('GPay', false),
-              _buildPaymentOption('PayPal', false),
-              _buildPaymentOption('Cash on Delivery', false),
+              const SizedBox(height: 16),
+              _buildPaymentOptions(),
               const SizedBox(height: 20),
               if (_selectedPaymentMethod == 'Debit/Credit Card')
                 _buildCardDetailsForm(),
               const SizedBox(height: 20),
-              CheckboxListTile(
-                title: const Text('Save Card Details for Future Use'),
-                value: _saveCard,
-                onChanged: (value) {
-                  setState(() {
-                    _saveCard = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submitForm, // Handle form submission
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              _buildSaveCardCheckbox(),
+              const SizedBox(height: 30),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 50,
+                      vertical: 15,
+                    ),
+                  ),
+                  child: const Text(
+                    'Pay Now',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-                child: const Text('Pay Now', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -78,18 +86,59 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     );
   }
 
-  Widget _buildPaymentOption(String method, bool isSelected) {
-    return ListTile(
-      leading: Radio<String>(
-        value: method,
-        groupValue: _selectedPaymentMethod,
-        onChanged: (value) {
-          setState(() {
-            _selectedPaymentMethod = value!;
-          });
-        },
-      ),
-      title: Text(method),
+  Widget _buildPaymentOptions() {
+    final options = [
+      'Debit/Credit Card',
+      'GPay',
+      'PayPal',
+      'Cash on Delivery',
+    ];
+
+    return Column(
+      children: options.map((method) {
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedPaymentMethod = method;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: _selectedPaymentMethod == method
+                  ? const Color(0xFF4CAF50).withOpacity(0.1)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _selectedPaymentMethod == method
+                    ? const Color(0xFF4CAF50)
+                    : Colors.grey[300]!,
+                width: 2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Radio<String>(
+                  value: method,
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPaymentMethod = value!;
+                    });
+                  },
+                  activeColor: const Color(0xFF4CAF50),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  method,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -97,81 +146,47 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Card Details',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
         ),
         const SizedBox(height: 10),
-        TextFormField(
+        _buildTextField(
           controller: _cardNameController,
-          decoration: const InputDecoration(
-            labelText: 'Name on Card',
-            border: OutlineInputBorder(),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter the name on the card';
-            }
-            return null;
-          },
+          labelText: 'Name on Card',
+          hintText: 'Enter the name on your card',
         ),
         const SizedBox(height: 10),
-        TextFormField(
+        _buildTextField(
           controller: _cardNumberController,
-          decoration: const InputDecoration(
-            labelText: 'Card Number',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
+          labelText: 'Card Number',
+          hintText: 'XXXX XXXX XXXX XXXX',
           maxLength: 16,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter the card number';
-            } else if (value.length != 16) {
-              return 'Card number must be 16 digits';
-            }
-            return null;
-          },
+          keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
-              child: TextFormField(
+              child: _buildTextField(
                 controller: _expiryDateController,
-                decoration: const InputDecoration(
-                  labelText: 'Expiration Date (MM/YY)',
-                  border: OutlineInputBorder(),
-                ),
+                labelText: 'Expiration Date',
+                hintText: 'MM/YY',
                 keyboardType: TextInputType.datetime,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Enter expiration date';
-                  } else if (!_validateExpiryDate(value)) {
-                    return 'Invalid date';
-                  }
-                  return null;
-                },
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextFormField(
+              child: _buildTextField(
                 controller: _cvvController,
-                decoration: const InputDecoration(
-                  labelText: 'CVV',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
+                labelText: 'CVV',
+                hintText: '123',
                 maxLength: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Enter CVV';
-                  } else if (value.length != 3) {
-                    return 'CVV must be 3 digits';
-                  }
-                  return null;
-                },
+                keyboardType: TextInputType.number,
               ),
             ),
           ],
@@ -180,20 +195,64 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     );
   }
 
-  // Form submission function
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    String? hintText,
+    int? maxLength,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        filled: true,
+        fillColor: Colors.white,
+        counterText: '',
+      ),
+      maxLength: maxLength,
+      keyboardType: keyboardType,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter $labelText';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildSaveCardCheckbox() {
+    return Row(
+      children: [
+        Checkbox(
+          value: _saveCard,
+          onChanged: (value) {
+            setState(() {
+              _saveCard = value!;
+            });
+          },
+          activeColor: const Color(0xFF4CAF50),
+        ),
+        const Text(
+          'Save Card Details for Future Use',
+          style: TextStyle(fontSize: 16),
+        ),
+      ],
+    );
+  }
+
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      // If all fields are valid, proceed with payment logic
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Processing Payment')),
+        const SnackBar(content: Text('Processing Payment...')),
       );
 
-      // Save payment details to Firestore
       _addPaymentDetails().then((_) {
-        // Navigate to Delivery.dart after successful payment
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => DeliveryScreen( )), // Replace with your Delivery screen widget
+          MaterialPageRoute(builder: (context) => DeliveryScreen()),
         );
       });
 
@@ -203,12 +262,11 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     }
   }
 
-  // Save payment details to Firestore
   Future<void> _addPaymentDetails() async {
     try {
       await FirebaseFirestore.instance.collection('payment').add({
-        'paymentName': 'Your Payment Name', // Replace with the actual payment name
-        'payAmount': 100.0, // Replace with the actual amount you want to save
+        'paymentName': 'Payment',
+        'payAmount': 100.0,
         'timestamp': FieldValue.serverTimestamp(),
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,7 +279,6 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
     }
   }
 
-  // Save card details to Firestore
   void _saveCardDetails() {
     FirebaseFirestore.instance.collection('cart').doc(widget.docId).update({
       'cardDetails': {
@@ -238,11 +295,5 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
         SnackBar(content: Text('Failed to save card details: $error')),
       );
     });
-  }
-
-  // Expiry date validation
-  bool _validateExpiryDate(String value) {
-    final RegExp expiryRegExp = RegExp(r'^(0[1-9]|1[0-2])\/?([0-9]{2})$');
-    return expiryRegExp.hasMatch(value);
   }
 }

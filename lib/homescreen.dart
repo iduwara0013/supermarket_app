@@ -16,7 +16,6 @@ import 'HealthWellness.dart';
 import 'BakeryProducts.dart';
 import 'Meats_Seafood.dart';
 
-
 void main() {
   runApp(const MyApp());
 }
@@ -27,6 +26,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+        colorScheme: ColorScheme.light(
+    secondary: Colors.green, // New way
+  ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
       home: const HomeScreen(),
     );
   }
@@ -43,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   int _selectedIndex = 0;
-   List<String> _imageUrls = []; // Store image URLs from Firestore
+  List<String> _imageUrls = []; // Store image URLs from Firestore
   
   @override
   void initState() {
@@ -85,7 +90,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -100,10 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       case 1: // Search
         // Implement search page navigation
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SearchPage()),
-        );
+        
         break;
       case 2: // Categories
         Navigator.push(
@@ -158,17 +159,17 @@ class _HomeScreenState extends State<HomeScreen> {
           title: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white), // Change icon color to white
+                icon: const Icon(Icons.menu, color: Colors.white),
                 onPressed: () {},
               ),
-              const SizedBox(width: 8), // Optional spacing between the menu icon and logo
+              const SizedBox(width: 8),
               Image.asset(
                 'assets/logo.png',
                 height: 40,
               ),
-              const Spacer(), // Pushes the following icons to the right side
+              const Spacer(),
               IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.white), // Change icon color to white
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.person, color: Colors.white), // Change icon color to white
+                icon: const Icon(Icons.person, color: Colors.white),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -193,17 +194,22 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 16),
               // Search Bar
-              const Padding(
-                padding: EdgeInsets.all(8.0),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'What are you looking for',
-                          prefixIcon: Icon(Icons.search), // Keep the search icon
-                          border: InputBorder.none, // Remove the border
-                          hintStyle: TextStyle(color: Colors.grey), // Optional: Change hint text color
+                          hintText: 'What are you looking for?',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                              color: Colors.green.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -212,67 +218,65 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               // Image carousel with auto-scroll and dots indicator
-SizedBox(
-  height: 190,
-  width: 400,
-  child: ClipRRect(
-    borderRadius: BorderRadius.circular(35.0), // Adjust the radius for curve effect
-    child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20.0), // Add space on left and right
-      child: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-              _autoScrollImages();
-            },
-            itemCount: _imageUrls.length,
-            itemBuilder: (context, index) {
-              return Image.network(
-                _imageUrls[index], // Fetch the image from Firestore
-                fit: BoxFit.cover,
-                width: MediaQuery.of(context).size.width,
-              );
-            },
-          ),
-          Positioned(
-            bottom: 10,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: DotsIndicator(
-                dotsCount: _imageUrls.length,
-                position: _currentPage.toInt(),
-                decorator: DotsDecorator(
-                  activeColor: Colors.green,
-                  size: const Size.square(9.0),
-                  activeSize: const Size(18.0, 9.0),
-                  activeShape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(5.0),
+              SizedBox(
+                height: 190,
+                width: 400,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(35.0), // Adjust the radius for curve effect
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Stack(
+                      children: [
+                        PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                            _autoScrollImages();
+                          },
+                          itemCount: _imageUrls.length,
+                          itemBuilder: (context, index) {
+                            return Image.network(
+                              _imageUrls[index], // Fetch the image from Firestore
+                              fit: BoxFit.cover,
+                              width: MediaQuery.of(context).size.width,
+                            );
+                          },
+                        ),
+                        Positioned(
+                          bottom: 10,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: DotsIndicator(
+                              dotsCount: _imageUrls.length,
+                              position: _currentPage.toInt(),
+                              decorator: DotsDecorator(
+                                activeColor: Colors.green,
+                                size: const Size.square(9.0),
+                                activeSize: const Size(18.0, 9.0),
+                                activeShape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(5.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  ),
-),
-
-
               // Categories Section
-              const Padding(
-                padding: EdgeInsets.all(8.0),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Align(
-                  alignment: Alignment.centerLeft, // Align text to the left
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     'CATEGORIES',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Color.fromRGBO(93, 95, 90, 1),
                     ),
@@ -295,104 +299,40 @@ SizedBox(
                   ],
                 ),
               ),
-              // GreenMart Deals Section
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Align(
-                  alignment: Alignment.centerLeft, // Aligns text to the left
-                  child: Text(
-                    'GreenMart Deals',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(93, 95, 90, 1),
-                    ),
-                  ),
-                ),
-              ),
-              DealSection('GreenMart Deals'),
-              // Best Sellers Section
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Align(
-                  alignment: Alignment.centerLeft, // Aligns text to the left
-                  child: Text(
-                    'Best Sellers',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(93, 95, 90, 1),
-                    ),
-                  ),
-                ),
-              ),
-              DealSection('Best Sellers'),
-              // Fresco Deals Section
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Align(
-                  alignment: Alignment.centerLeft, // Aligns text to the left
-                  child: Text(
-                    'Fresco Deals',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(93, 95, 90, 1),
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                margin: const EdgeInsets.all(8.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 229, 255, 205),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Row(
-                  children: [
-                    // Text on the left side
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center, // Center the text vertically
-                        crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
-                        children: [
-                          Text(
-                            'Buy 1 Get 1 Free!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Fresco Brand Vegetables',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
+              // Sections like GreenMart Deals, Best Sellers, and Fresco Deals
+              ...[
+                'GreenMart Deals',
+                'Best Sellers',
+                'Fresco Deals',
+              ].map((sectionTitle) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sectionTitle,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                    // Image on the right side
-                    
-                    const SizedBox(width: 8), // Space between image and button
-                    // Add to Cart button
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Add to cart functionality
-                      },
-                      icon: const Icon(Icons.add_shopping_cart),
-                      label: const Text('Add to Cart'),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white, backgroundColor: Colors.green, // Text color
+                      // Section with products will go here, e.g., items from Firestore
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            SectionItemCard('Product 1', 'assets/item1.jpg'),
+                            SectionItemCard('Product 2', 'assets/item2.jpg'),
+                            SectionItemCard('Product 3', 'assets/item3.jpg'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+                );
+              }).toList(),
               Container(
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(16.0),
@@ -452,64 +392,63 @@ SizedBox(
                   ],
                 ),
               ),
+
+
             ],
+            
           ),
         ),
         bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
+
       ),
     );
   }
 }
 
-// Category Card Widget
 class CategoryCard extends StatelessWidget {
-  final String title;
+  final String categoryName;
   final String imagePath;
-  final Widget? page;
+  final Widget page;
 
-  const CategoryCard(this.title, this.imagePath, this.page, {Key? key}) : super(key: key);
+  const CategoryCard(
+    this.categoryName,
+    this.imagePath,
+    this.page, {
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (page != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => page!),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => page),
+        );
       },
-      child: Container(
-        width: 120,
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         margin: const EdgeInsets.symmetric(horizontal: 8.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10.0),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 5.0,
-              spreadRadius: 2.0,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset(
-              imagePath,
-              height: 60,
-              fit: BoxFit.cover,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imagePath,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(categoryName),
             ),
           ],
         ),
@@ -518,51 +457,44 @@ class CategoryCard extends StatelessWidget {
   }
 }
 
-// Deal Section Widget
-class DealSection extends StatelessWidget {
-  final String title;
+class SectionItemCard extends StatelessWidget {
+  final String productName;
+  final String imagePath;
 
-  const DealSection(this.title, {Key? key}) : super(key: key);
+  const SectionItemCard(
+    this.productName,
+    this.imagePath, {
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8.0),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5.0,
-            spreadRadius: 2.0,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to product details page or add to cart
+      },
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
         ),
-      ),
-    );
-  }
-}
-
-// Search Page (for demonstration purposes)
-class SearchPage extends StatelessWidget {
-  const SearchPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search'),
-      ),
-      body: Center(
-        child: const Text('Search Page'),
+        margin: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imagePath,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(productName),
+            ),
+          ],
+        ),
       ),
     );
   }

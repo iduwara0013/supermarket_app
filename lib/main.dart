@@ -7,7 +7,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -17,10 +17,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: GreenMarketScreen(),
+      home: const GreenMarketScreen(),
       routes: {
-        '/login': (context) => LoginScreen(),
-        '/signup': (context) => SignUpScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignUpScreen(),
       },
     );
   }
@@ -34,12 +34,18 @@ class GreenMarketScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Top green background with curve
+          // Gradient background with curve
           ClipPath(
             clipper: TopCurveClipper(),
             child: Container(
-              color: const Color(0xFF3A6810), // Green background color
-              height: MediaQuery.of(context).size.height * 0.5, // Adjust the height as needed
+              height: MediaQuery.of(context).size.height * 0.5,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF3A6810), Color(0xFF6CC51D)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
           ),
           SafeArea(
@@ -47,70 +53,82 @@ class GreenMarketScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Image with person holding a box
+                  // Adjusted image size
                   SizedBox(
-                    width: 600, // Adjust the width as needed
-                    height: 400, // Adjust the height as needed
+                    width: MediaQuery.of(context).size.width * 1, // 80% of screen width
+                    height: MediaQuery.of(context).size.height * 0.6, // 40% of screen height
                     child: Image.asset(
-                      'assets/deliveryboy.png', // Replace with your actual image path
-                      fit: BoxFit.cover, // Adjust the fit as needed
+                      'assets/deliveryboy.png',
+                      fit: BoxFit.contain, // Maintain aspect ratio
                     ),
                   ),
-                 const SizedBox(height: 1),
+                  const SizedBox(height: 10),
                   const Text(
                     'Groceries without Stress',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 15),
                   Text(
-                    'Order from a wide selection of 5000+ fresh produce\nand groceries at the Comfort of your home',
+                    'Order from a wide selection of 5000+ fresh produce\n'
+                    'and groceries at the comfort of your home',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.grey[800],
+                      color: Colors.black.withOpacity(0.7),
                     ),
                   ),
-                  const SizedBox(height: 40),
-                  // Row for Login and Sign Up buttons
+                  const SizedBox(height: 50),
+                  // Buttons
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Login Button
                       ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/login'); // Navigate to login screen
+                          Navigator.pushNamed(context, '/login');
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                          backgroundColor: const Color(0xFF6CC51D), // Light green color
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(30.0),
                           ),
+                          shadowColor: Colors.black26,
+                          elevation: 5,
                         ),
                         child: const Text(
                           'Login',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          style: TextStyle(
+                            color: Color(0xFF3A6810),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      // Sign Up Button
+                      const SizedBox(width: 20),
                       ElevatedButton(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/signup'); // Navigate to signup screen
+                          Navigator.pushNamed(context, '/signup');
                         },
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                          backgroundColor: const Color(0xFF6CC51D), // Light green color
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          backgroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.0),
+                            borderRadius: BorderRadius.circular(30.0),
                           ),
+                          shadowColor: Colors.black26,
+                          elevation: 5,
                         ),
                         child: const Text(
                           'Sign Up',
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          style: TextStyle(
+                            color: Color(0xFF3A6810),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -130,10 +148,14 @@ class TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     var path = Path();
-    path.lineTo(0, size.height - 100); // Start at the bottom left
+    path.lineTo(0, size.height * 0.8);
     path.quadraticBezierTo(
-        size.width / 2, size.height, size.width, size.height - 100); // Curve effect
-    path.lineTo(size.width, 0); // Line to the top right
+      size.width * 0.5,
+      size.height,
+      size.width,
+      size.height * 0.8,
+    );
+    path.lineTo(size.width, 0);
     path.close();
     return path;
   }

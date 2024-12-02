@@ -173,7 +173,7 @@ class _BeveragesScreenState extends State<BeveragesScreen> {
     });
   }
 
- Future<void> addToCart(Map<String, dynamic> product) async {
+Future<void> addToCart(Map<String, dynamic> product) async {
     var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
 
     var cartSnapshot = await cartDocRef.get();
@@ -220,55 +220,80 @@ class _BeveragesScreenState extends State<BeveragesScreen> {
       'totalPrice': totalPrice,
     }, SetOptions(merge: true));
 
-    // Update stock for the current month without creating a new field
-    await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
+    // Update the total stock count in the beverages collection
+    await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
       'inStockMonth.totalStock': FieldValue.increment(-1),
     });
 
-    // Update the displayed total price
     _fetchTotalPrice(); // Fetch total price after adding
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
-    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+  var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
 
-    try {
-      var cartSnapshot = await cartDocRef.get();
-      List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
-      double totalPrice = (cartSnapshot.data()?['totalPrice'] is num)
-          ? (cartSnapshot.data()?['totalPrice'] as num).toDouble()
-          : 0.0;
+  try {
+    var cartSnapshot = await cartDocRef.get();
+    List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+    double totalPrice = 0.0;
 
-      double productPrice = (product['finalPrice'] is num)
-          ? (product['finalPrice'] as num).toDouble()
-          : 0.0;
-
-      for (var item in cartItems) {
-        if (item['name'] == product['productName']) {
-          if (item['quantity'] > 1) {
-            item['quantity']--;
-            totalPrice -= productPrice;
-          } else {
-            totalPrice -= productPrice;
-            cartItems.remove(item);
-          }
-          break;
-        }
-      }
-
-      await cartDocRef.set({
-        'items': cartItems,
-        'totalPrice': totalPrice,
-      }, SetOptions(merge: true));
-
-      await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
-        'inStockMonth.totalStock': FieldValue.increment(1),
-      });
-    } catch (e) {
-      print("Error removing from cart: $e");
+    // Ensure totalPrice is extracted correctly
+    var totalPriceData = cartSnapshot.data()?['totalPrice'];
+    if (totalPriceData is String) {
+      totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+    } else if (totalPriceData is num) {
+      totalPrice = totalPriceData.toDouble();
     }
+
+    double productPrice = 0.0;
+    var finalPrice = product['finalPrice'];
+    if (finalPrice is String) {
+      productPrice = double.tryParse(finalPrice) ?? 0.0;
+    } else if (finalPrice is num) {
+      productPrice = finalPrice.toDouble();
+    }
+
+    bool itemFound = false;
+
+    for (var item in cartItems) {
+      if (item['name'] == product['productName']) {
+        itemFound = true;
+
+        // Decrease quantity if greater than 1, otherwise remove item
+        if (item['quantity'] > 1) {
+          item['quantity']--;
+          totalPrice -= productPrice; // Subtract price for each quantity
+        } else {
+          totalPrice -= productPrice; // Subtract price for removal
+          cartItems.remove(item); // Remove item from cart
+        }
+        break; // Exit loop after modifying the item
+      }
+    }
+
+    if (!itemFound) {
+      print('Item not found in cart.');
+      return; // If item is not found, exit the function
+    }
+
+    // Update cart document with modified items and totalPrice
+    await cartDocRef.set({
+      'items': cartItems,
+      'totalPrice': totalPrice,
+    }, SetOptions(merge: true));
+
+    // Update the total stock count in the beverages collection
+    await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
+      'inStockMonth.totalStock': FieldValue.increment(1),
+    });
+
+  } catch (e) {
+    print("Error removing from cart: $e");
   }
 }
+
+}
+
+
 
 class CategoryButton extends StatelessWidget {
   final String text;

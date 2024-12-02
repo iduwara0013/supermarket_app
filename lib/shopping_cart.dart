@@ -12,20 +12,21 @@ class ShoppingCartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 58, 104, 16),
-        title: Text('Shopping Cart'),
+        backgroundColor: Colors.green,
+        title: Text(
+          'Shopping Cart',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('current_user').doc('current').snapshots(),
         builder: (context, userSnapshot) {
           if (userSnapshot.hasError) {
-            return Center(child: Text('Error retrieving user: ${userSnapshot.error}'));
+            return Center(child: Text('Error: ${userSnapshot.error}'));
           }
 
           if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
@@ -47,7 +48,6 @@ class ShoppingCartPage extends StatelessWidget {
               }
 
               var cartData = cartSnapshot.data!.data() as Map<String, dynamic>? ?? {};
-              // Check if 'items' is a map or list
               var itemsData = cartData['items'];
               List<dynamic> cartItems = [];
 
@@ -57,7 +57,7 @@ class ShoppingCartPage extends StatelessWidget {
                 cartItems = itemsData;
               }
 
-              num subTotal = cartData['totalPrice'] ?? 0;
+              num subTotal = cartData['totalPrice'] ?? 0; // Fetch subtotal from Firestore
               double total = subTotal.toDouble() - discount + deliveryCharge;
 
               return Column(
@@ -99,115 +99,66 @@ class ShoppingCartPage extends StatelessWidget {
     required double totalPrice,
     required String userId,
     required int itemIndex,
-    required Map<String, dynamic> itemData, // New parameter
+    required Map<String, dynamic> itemData,
   }) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  color: Colors.green,
-                  size: 12,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        itemName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        itemCategory,
-                        style: TextStyle(
-                          color: Colors.grey,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Rs $price',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '$itemCount Item(s)',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Total: Rs $totalPrice',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.shopping_cart, color: Colors.green, size: 32),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    itemName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 4),
+                  Text(
+                    itemCategory,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Rs $price',
+                    style: TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$itemCount Item(s)',
+                    style: TextStyle(fontSize: 14, color: Colors.black),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.add_circle_outline, color: Colors.green),
-                onPressed: () {
-                  updateCartItemQuantity(userId, itemIndex, itemCount + 1);
-                },
-              ),
-              Text(
-                '$itemCount',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.remove_circle_outline, color: Colors.green),
-                onPressed: () {
-                  if (itemCount > 1) {
-                    updateCartItemQuantity(userId, itemIndex, itemCount - 1);
-                  } else {
-                    removeCartItem(userId, itemData); // Pass itemData directly
-                  }
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.delete, color: Colors.black),
-                onPressed: () {
-                  removeCartItem(userId, itemData); // Pass itemData directly
-                },
-              ),
-            ],
-          ),
-        ],
+            IconButton(
+              icon: Icon(Icons.delete, color: Colors.red),
+              onPressed: () => removeCartItem(userId, itemData),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget summarySection(double subTotal, double total) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      color: Colors.green[50],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          summaryRow('Sub Total(Rs)', 'Rs $subTotal'),
-          summaryRow('Total Discount', 'Rs $discount'),
+          summaryRow('Sub Total', 'Rs $subTotal'),
+          summaryRow('Discount', 'Rs $discount'),
           summaryRow('Delivery Charge', 'Rs $deliveryCharge'),
           Divider(thickness: 1),
           summaryRow('Total', 'Rs $total', isTotal: true),
@@ -225,15 +176,16 @@ class ShoppingCartPage extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
+              fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal ? 16 : 14,
             ),
           ),
           Text(
             value,
             style: TextStyle(
+              fontSize: isTotal ? 18 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal ? 16 : 14,
+              color: isTotal ? Colors.green : Colors.black,
             ),
           ),
         ],
@@ -243,18 +195,21 @@ class ShoppingCartPage extends StatelessWidget {
 
   Widget checkoutButtons(BuildContext context, String userId) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
         children: [
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.grey,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: () {
-                Navigator.pop(context); // Go back to the previous screen
-              },
-              child: Text('CANCEL'),
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'CANCEL',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
           SizedBox(width: 16),
@@ -262,16 +217,19 @@ class ShoppingCartPage extends StatelessWidget {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => PickupDetailsScreen( ),
-                  ),
+                  MaterialPageRoute(builder: (context) => PickupDetailsScreen()),
                 );
               },
-              child: Text('CHECKOUT'),
+              child: Text(
+                'CHECKOUT',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
         ],
@@ -279,15 +237,18 @@ class ShoppingCartPage extends StatelessWidget {
     );
   }
 
-  void updateCartItemQuantity(String userId, int itemIndex, int newQuantity) {
-    FirebaseFirestore.instance.collection('cart').doc(userId).update({
-      'items.$itemIndex.quantity': newQuantity,
-    });
-  }
-
   void removeCartItem(String userId, Map<String, dynamic> itemData) {
+    double price = (itemData['price'] as num?)?.toDouble() ?? 0.0;
+    int quantity = itemData['quantity'] ?? 1;
+    double itemTotal = price * quantity;
+
     FirebaseFirestore.instance.collection('cart').doc(userId).update({
-      'items': FieldValue.arrayRemove([itemData]), // Remove the item using its data
+      'items': FieldValue.arrayRemove([itemData]),
+      'totalPrice': FieldValue.increment(-itemTotal),
+    }).then((_) {
+      FirebaseFirestore.instance.collection('beverages').doc(itemData['id']).update({
+        'stock': FieldValue.increment(quantity),
+      });
     });
   }
 }
