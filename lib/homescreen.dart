@@ -48,13 +48,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   int _selectedIndex = 0;
-  List<String> _imageUrls = []; // Store image URLs from Firestore
-  
+  List<String> _imageUrls = [];
+  List<Map<String, dynamic>> _greenMartDeals = [];
+  List<Map<String, dynamic>> _bestSellers = [];
+  List<Map<String, dynamic>> _frescoDeals = [];
+
   @override
   void initState() {
     super.initState();
     _fetchPromotions();
     _autoScrollImages();
+    _fetchDeals();
   }
 
   // Fetch image URLs from Firebase Firestore
@@ -71,6 +75,56 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       print('Error fetching promotions: $e');
+    }
+  }
+  // Fetch data from Firestore for the different sections
+  Future<void> _fetchDeals() async {
+    try {
+      // Fetch GreenMart Deals
+      QuerySnapshot greenMartSnapshot = await FirebaseFirestore.instance
+          .collection('greenMartDeals')
+          .get();
+      setState(() {
+        _greenMartDeals = greenMartSnapshot.docs
+            .map((doc) => {
+                  'productName': doc['productName'],
+                  'imageUrl': doc['imageUrl'],
+                  'dealType': doc['dealType'],
+                  'discount': doc['discount'],
+                })
+            .toList();
+      });
+
+      // Fetch Best Sellers
+      QuerySnapshot bestSellersSnapshot = await FirebaseFirestore.instance
+          .collection('bestSellers')
+          .get();
+      setState(() {
+        _bestSellers = bestSellersSnapshot.docs
+            .map((doc) => {
+                  'productName': doc['productName'],
+                  'imageUrl': doc['imageUrl'],
+                  'price': doc['price'],
+                })
+            .toList();
+      });
+
+      // Fetch Fresco Deals
+      QuerySnapshot frescoDealsSnapshot = await FirebaseFirestore.instance
+          .collection('frescoDeals')
+          .get();
+      setState(() {
+        _frescoDeals = frescoDealsSnapshot.docs
+            .map((doc) => {
+                  'productName': doc['productName'],
+                  'imageUrl': doc['imageUrl'],
+                  'dealType': doc['dealType'],
+                  'discount': doc['discount'],
+                })
+            .toList();
+      });
+    } catch (e) {
+      print('Error fetching deals: $e');
     }
   }
 
@@ -146,6 +200,54 @@ class _HomeScreenState extends State<HomeScreen> {
       return Future.value(false);
     }
   }
+ Widget SectionItemCard(String productName, String imageUrl, [String? price, String? discount]) {
+  return Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(15),
+    ),
+    margin: const EdgeInsets.symmetric(horizontal: 8.0),
+    child: Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            imageUrl,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(productName),
+              if (price != null) Text('Price: \$${price}'),
+              if (discount != null) 
+                Container(
+                  margin: const EdgeInsets.only(top: 4.0),
+                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${discount}% OFF',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -300,39 +402,54 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               // Sections like GreenMart Deals, Best Sellers, and Fresco Deals
-              ...[
-                'GreenMart Deals',
-                'Best Sellers',
-                'Fresco Deals',
-              ].map((sectionTitle) {
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sectionTitle,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+              // Section display logic
+...[
+              {
+                'title': 'GreenMart Deals',
+                'products': _greenMartDeals,
+                'sectionType': 'greenMartDeals',
+              },
+              {
+                'title': 'Best Sellers',
+                'products': _bestSellers,
+                'sectionType': 'bestSellers',
+              },
+              {
+                'title': 'Fresco Deals',
+                'products': _frescoDeals,
+                'sectionType': 'frescoDeals',
+              },
+            ].map((section) {
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      section['title'] as String,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
-                      // Section with products will go here, e.g., items from Firestore
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            SectionItemCard('Product 1', 'assets/item1.jpg'),
-                            SectionItemCard('Product 2', 'assets/item2.jpg'),
-                            SectionItemCard('Product 3', 'assets/item3.jpg'),
-                          ],
-                        ),
+                    ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: (section['products'] as List).map((product) {
+                          return SectionItemCard(
+                            product['productName'] as String,
+                            product['imageUrl'] as String,
+                            product.containsKey('price') ? product['price'] : null,
+                            product.containsKey('discount') ? product['discount'] : null,
+                          );
+                        }).toList(),
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
               Container(
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(16.0),

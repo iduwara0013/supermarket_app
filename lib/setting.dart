@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'homescreen.dart';
 import 'category.dart';
 import 'profile_information.dart';
-import 'login_screen.dart'; // Import the login_screen.dart for navigation to the login screen
+import 'main.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -39,46 +39,115 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // Method to delete the account from Firestore and Firebase Authentication
   Future<void> _deleteAccount() async {
-    try {
-      User? currentUser = _auth.currentUser;
+  try {
+    User? currentUser = _auth.currentUser;
 
-      if (currentUser != null) {
-        // Fetch the user document from Firestore based on the current user's UID
-        DocumentSnapshot userDoc = await _firestore
-            .collection('current_user')
-            .doc(currentUser.uid)
-            .get();
+    if (currentUser != null) {
+      // Fetch userId from the 'current_user/current' document
+      DocumentSnapshot currentUserDoc = await _firestore
+          .collection('current_user')
+          .doc('current')
+          .get();
 
-        if (userDoc.exists) {
-          // Get the email and other necessary data from the Firestore document
-          String email = userDoc['email']; // Assuming email field is in the Firestore document
+      if (currentUserDoc.exists) {
+        // Cast the data to Map<String, dynamic>
+        final data = currentUserDoc.data() as Map<String, dynamic>?;
+        final userId = data?['userId'] ?? '';
 
-          // Delete the document in Firestore (from both current_user and users collection)
-          await _firestore.collection('current_user').doc(currentUser.uid).delete();
-          await _firestore.collection('users').doc(currentUser.uid).delete();
+        if (userId.isNotEmpty) {
+          
+
+          // Delete user document from 'users' collection
+          await _firestore.collection('users').doc(userId).delete();
 
           // Delete the user from Firebase Authentication
           await currentUser.delete();
 
-          // Show a confirmation message
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account deleted successfully.')),
           );
 
-          // Navigate to login screen after deleting the account
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          // Navigate to main.dart (clears the navigation stack)
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const GreenMarketScreen()),
+            (route) => false,
+          );
         } else {
+          // Handle case where userId is not found
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User document does not exist in Firestore.')),
+            const SnackBar(content: Text('User ID not found in Firestore.')),
           );
         }
+      } else {
+        // Handle case where 'current_user/current' does not exist
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No current user document found in Firestore.')),
+        );
       }
-    } catch (e) {
-      // Handle errors (such as re-authentication required for account deletion)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete account: $e')),
-      );
     }
+  } catch (e) {
+    // Handle errors (e.g., re-authentication required for account deletion)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to delete account: $e')),
+    );
+  }
+}
+
+
+  // Show confirmation dialog
+  Future<void> _showConfirmationDialog({
+    required String title,
+    required String content,
+    required VoidCallback onConfirm,
+  }) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // Prevent dismissal by tapping outside
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+            TextButton(
+              child: const Text('Confirm', style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                onConfirm(); // Execute the confirmation action
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Confirm logout
+  void _confirmLogout() {
+    _showConfirmationDialog(
+      title: 'Logout',
+      content: 'Are you sure you want to log out?',
+      onConfirm: () {
+        _auth.signOut(); // Sign out the user
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      },
+    );
+  }
+
+  // Confirm account deletion
+  void _confirmDeleteAccount() {
+    _showConfirmationDialog(
+      title: 'Delete Account',
+      content: 'Are you sure you want to delete your account? This action cannot be undone.',
+      onConfirm: _deleteAccount,
+    );
   }
 
   @override
@@ -120,7 +189,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Delete Account', style: TextStyle(color: Colors.black)),
               subtitle: const Text('Delete your account from the app', style: TextStyle(color: Colors.grey)),
               trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey), // Arrow in grey
-              onTap: _deleteAccount, // Call the delete account method when tapped
+              onTap: _confirmDeleteAccount, // Call the confirm delete account dialog
             ),
             const Divider(),
             ListTile(
@@ -128,10 +197,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: const Text('Logout', style: TextStyle(color: Colors.black)),
               subtitle: const Text('Log out of the App', style: TextStyle(color: Colors.grey)),
               trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey), // Arrow in grey
-              onTap: () {
-                // Navigate back to the login screen on logout
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-              },
+              onTap: _confirmLogout, // Call the confirm logout dialog
             ),
           ],
         ),

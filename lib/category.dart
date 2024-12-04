@@ -17,14 +17,14 @@ class _CategoryPageState extends State<CategoryPage> {
 
   // Add the list of categories with corresponding image assets, labels, and custom properties
   final List<Map<String, dynamic>> categories = [
-    {'label': 'Dairy & Eggs', 'image': 'assets/dairy1.png', 'color': Color(0xFFFFE9E5), 'imageSize': 120.0},
-    {'label': 'Meats & Seafood', 'image': 'assets/meats1.png', 'color': Color(0xFFDCF4F5), 'imageSize': 60.0},
-    {'label': 'Grocery', 'image': 'assets/grocery1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 80.0},
-    {'label': 'Bakery Products', 'image': 'assets/bakery1.png', 'color': Color(0xFFEFE5FF), 'imageSize': 65.0},
-    {'label': 'Snacks', 'image': 'assets/snacks1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 20.0},
-    {'label': 'Beverages', 'image': 'assets/beverages1.png', 'color': Color(0xFFE6F3EA), 'imageSize': 55.0},
-    {'label': 'Health & Wellness', 'image': 'assets/health1.png', 'color': Color(0xFFE6F3EA), 'imageSize': 80.0},
-    {'label': 'Frozen Foods', 'image': 'assets/frozen1.png', 'color': Color(0xFFFFF5D2), 'imageSize': 70.0},
+    {'label': 'Dairy & Eggs', 'image': 'assets/dairy1.png', 'color': Color(0xFFFFE9E5)},
+    {'label': 'Meats & Seafood', 'image': 'assets/meats1.webp', 'color': Color(0xFFDCF4F5)},
+    {'label': 'Grocery', 'image': 'assets/grocery1.png', 'color': Color(0xFFFFF5D2)},
+    {'label': 'Bakery Products', 'image': 'assets/bakery1.png', 'color': Color(0xFFEFE5FF)},
+    {'label': 'Snacks', 'image': 'assets/snacks1.jpg', 'color': Color(0xFFFFF5D2)},
+    {'label': 'Beverages', 'image': 'assets/beverages1.png', 'color': Color(0xFFE6F3EA)},
+    {'label': 'Health & Wellness', 'image': 'assets/health1.png', 'color': Color(0xFFE6F3EA)},
+    {'label': 'Frozen Foods', 'image': 'assets/frozen1.png', 'color': Color(0xFFFFF5D2)},
   ];
 
   void _onItemTapped(int index) {
@@ -33,20 +33,11 @@ class _CategoryPageState extends State<CategoryPage> {
     });
 
     if (index == 0) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()), // Replace HomeScreen with your home page
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen()));
     } else if (index == 3) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SettingsPage()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsPage()));
     } else if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => OrderScreen()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => OrderScreen()));
     }
   }
 
@@ -56,65 +47,83 @@ class _CategoryPageState extends State<CategoryPage> {
       appBar: AppBar(
         title: const Text(
           'Categories',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.green,
         centerTitle: true,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 4,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.builder(
-          itemCount: categories.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3, // Three items per row
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
-            childAspectRatio: 1, // Adjust the aspect ratio for item width/height ratio
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Color(0xFFF0F4F7)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          itemBuilder: (BuildContext context, int index) {
-            return GestureDetector(
-              onTap: () {
-                // Navigate to Beverage screen if the selected category is Beverages
-                if (categories[index]['label'] == 'Beverages') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => BeveragesScreen()), // Navigate to your Beverage screen
-                  );
-                }
-              },
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Container(
-                      width: 110.0,  // Adjust the overall size of the circle container
-                      height: 110.0, // Adjust the overall size of the circle container
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: categories[index]['color'], // Custom background color per item
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: GridView.builder(
+            itemCount: categories.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, // Two items per row for better visibility
+              crossAxisSpacing: 16.0,
+              mainAxisSpacing: 16.0,
+              childAspectRatio: 0.85,
+            ),
+            itemBuilder: (BuildContext context, int index) {
+              return GestureDetector(
+                onTap: () {
+                  // Navigate to Beverage screen if the selected category is Beverages
+                  if (categories[index]['label'] == 'Beverages') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => BeveragesScreen()),
+                    );
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8.0,
+                        offset: const Offset(0, 4),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0), // Adjust padding inside the circle
-                        child: Image.asset(
-                          categories[index]['image']!,
-                          width: categories[index]['imageSize'], // Custom image width per item
-                          height: categories[index]['imageSize'], // Custom image height per item
-                          fit: BoxFit.contain,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: categories[index]['color'],
+                        radius: 50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Image.asset(
+                            categories[index]['image']!,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        categories[index]['label']!,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    categories[index]['label']!,
-                    style: const TextStyle(fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
@@ -125,7 +134,7 @@ class _CategoryPageState extends State<CategoryPage> {
   }
 }
 
-// Reuse the BottomNavBar from the previous code
+// Updated BottomNavBar
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -141,23 +150,23 @@ class BottomNavBar extends StatelessWidget {
     return BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(
-          icon: Icon(Icons.home),
+          icon: Icon(Icons.home_outlined),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
+          icon: Icon(Icons.shopping_cart_outlined),
           label: 'Orders',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.category),
+          icon: Icon(Icons.category_outlined),
           label: 'Categories',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
+          icon: Icon(Icons.settings_outlined),
           label: 'Settings',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications),
+          icon: Icon(Icons.notifications_outlined),
           label: 'Notification',
         ),
       ],
