@@ -15,9 +15,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
-  double total = 0.0;  // This will store totalPrice from cart
-  String refundOption = '';  // This will store refundOption from PickupDetails
-  String userId = '';  // To store the userId
+  double total = 0.0;
+  String refundOption = '';
+  String userId = '';
 
   @override
   void initState() {
@@ -25,20 +25,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     _fetchUserDetails();
   }
 
-  // Fetch user details and refundOption from PickupDetails
   Future<void> _fetchUserDetails() async {
     try {
-      // Get the current user document from the 'current_user' collection
       DocumentSnapshot currentUserSnapshot = await FirebaseFirestore.instance
           .collection('current_user')
           .doc('current')
           .get();
 
       if (currentUserSnapshot.exists) {
-        // Retrieve the userId from the current user document
         userId = currentUserSnapshot.get('userId');
 
-        // Fetch the user's details from the 'users' collection
         DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(userId)
@@ -51,57 +47,39 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             _addressController.text = userSnapshot.get('address') ?? '';
           });
 
-          // Fetch the refundOption from the PickupDetails collection
           _fetchRefundOption(userId);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User not found')),
-          );
+          _showSnackbar('User not found');
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Current user not found')),
-        );
+        _showSnackbar('Current user not found');
       }
     } catch (e) {
-      print('Error fetching user details: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching user details: ${e.toString()}')),
-      );
+      _showSnackbar('Error fetching user details');
     }
   }
 
-  // Fetch refundOption based on userId from PickupDetails
   Future<void> _fetchRefundOption(String userId) async {
     try {
-      // Get the PickupDetails document for the current user
       QuerySnapshot pickupDetailsSnapshot = await FirebaseFirestore.instance
           .collection('PickupDetails')
           .where('userId', isEqualTo: userId)
           .get();
 
       if (pickupDetailsSnapshot.docs.isNotEmpty) {
-        // If a document is found, set the refundOption
         setState(() {
           refundOption = pickupDetailsSnapshot.docs[0].get('refundOption') ?? '';
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No pickup details found for this user')),
-        );
+        _showSnackbar('No pickup details found for this user');
       }
     } catch (e) {
-      print('Error fetching refund option: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching refund option: ${e.toString()}')),
-      );
+      _showSnackbar('Error fetching refund option');
     }
   }
 
-  // Fetch total price from the cart collection where the document ID is equal to userId
   Future<void> _fetchCartTotal() async {
     try {
-      // Fetch the cart document where the ID is the same as userId
       DocumentSnapshot cartDoc = await FirebaseFirestore.instance
           .collection('cart')
           .doc(userId)
@@ -112,51 +90,36 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           total = cartDoc.get('totalPrice') ?? 0.0;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No cart found for this user')),
-        );
+        _showSnackbar('No cart found for this user');
       }
     } catch (e) {
-      print('Error fetching cart total: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching cart total: ${e.toString()}')),
-      );
+      _showSnackbar('Error fetching cart total');
     }
   }
 
-  // Save the transaction in the transactions collection
   Future<void> _saveTransaction() async {
     try {
-      // Fetch the latest transaction ID from the 'transactionsId' collection
       DocumentSnapshot transactionIdSnapshot = await FirebaseFirestore.instance
           .collection('transactionsId')
           .doc('latestId')
           .get();
 
-      int newId = 1; // Default to 1 if no ID exists yet
-
+      int newId = 1;
       if (transactionIdSnapshot.exists) {
-        // If the document exists, get the current transactionId and increment it
         newId = transactionIdSnapshot.get('transactionId') + 1;
       }
 
       String createdAtDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       String createdAtTime = DateFormat('HH:mm:ss').format(DateTime.now());
 
-      // Determine the payment status based on the refundOption
-      String paymentStatus;
-      if (refundOption == 'CashOnDelivery') {
-        paymentStatus = 'Processing';
-      } else if (refundOption == 'Online') {
-        paymentStatus = 'Paid';
-      } else {
-        paymentStatus = 'Unknown';  // Default case if needed
-      }
+      String paymentStatus = refundOption == 'CashOnDelivery'
+          ? 'Processing'
+          : refundOption == 'Online'
+              ? 'Paid'
+              : 'Unknown';
 
-      // Fetch cart items and store them in a list
       List<Map<String, dynamic>> itemsList = await _fetchCartItems();
 
-      // Save the transaction document with the itemsList
       await FirebaseFirestore.instance
           .collection('transactions')
           .doc('$newId')
@@ -164,41 +127,28 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         'name': _nameController.text,
         'phone': _phoneController.text,
         'address': _addressController.text,
-        'paymentMethod': refundOption,  // Save refundOption as payment method
-        'paymentStatus': paymentStatus,  // New field for payment status
-        'amount': total,  // Save the totalPrice fetched from cart
+        'paymentMethod': refundOption,
+        'paymentStatus': paymentStatus,
+        'amount': total,
         'date': createdAtDate,
         'time': createdAtTime,
         'userId': userId,
-        'items': itemsList,  // Save items as a list of maps
+        'items': itemsList,
+        'createdAt': Timestamp.now(),
       });
 
-      // Update the 'transactionsId' collection with the new transactionId
       await FirebaseFirestore.instance
           .collection('transactionsId')
           .doc('latestId')
-          .set({
-        'transactionId': newId,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+          .set({'transactionId': newId, 'createdAt': FieldValue.serverTimestamp()});
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction saved successfully')),
-      );
-
-      // Clear the user's cart after saving the transaction
+      _showSnackbar('Transaction saved successfully');
       await _clearCart();
-
-      print('Transaction ID: $newId');
     } catch (e) {
-      print('Error saving transaction: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving transaction: ${e.toString()}')),
-      );
+      _showSnackbar('Error saving transaction');
     }
   }
 
-  // Fetch cart items from the cart collection
   Future<List<Map<String, dynamic>>> _fetchCartItems() async {
     try {
       DocumentSnapshot cartDoc = await FirebaseFirestore.instance
@@ -207,19 +157,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           .get();
 
       if (cartDoc.exists) {
-        // Assuming the items are stored in a field called 'items'
-        List<dynamic> items = cartDoc.get('items') ?? [];  // Get items as a list
-
-        // Convert the dynamic list to a list of maps
+        List<dynamic> items = cartDoc.get('items') ?? [];
         return items.map((item) => item as Map<String, dynamic>).toList();
       }
-    } catch (e) {
-      print('Error fetching cart items: $e');
-    }
-    return [];  // Return an empty list if there's an error
+    } catch (e) {}
+    return [];
   }
 
-  // Clear the user's cart
   Future<void> _clearCart() async {
     try {
       DocumentSnapshot cartDoc = await FirebaseFirestore.instance
@@ -228,18 +172,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           .get();
 
       if (cartDoc.exists) {
-        await cartDoc.reference.delete(); // Deletes the cart document
+        await cartDoc.reference.delete();
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cart cleared successfully')),
-      );
+      _showSnackbar('Cart cleared successfully');
     } catch (e) {
-      print('Error clearing cart: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error clearing cart: ${e.toString()}')),
-      );
+      _showSnackbar('Error clearing cart');
     }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -273,15 +215,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 backgroundColor: Colors.lightGreen,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
               ),
-              onPressed: () {
-                _fetchCartTotal().then((_) {
-                  _saveTransaction().then((_) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MyApp()),
-                    );
-                  });
-                });
+              onPressed: () async {
+                await _fetchCartTotal();
+                await _saveTransaction();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MyApp()),
+                );
               },
               child: const Text('Submit', style: TextStyle(color: Colors.white)),
             ),

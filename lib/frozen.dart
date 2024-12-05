@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'shopping_cart.dart' as shoppingCart; // Prefix for avoiding ambiguity
+import 'shopping_cart.dart' as shoppingCart;
 
 void main() {
   runApp(MaterialApp(
@@ -16,13 +16,28 @@ class FrozonPage extends StatefulWidget {
 class _FrozonPageState extends State<FrozonPage> {
   String selectedCategory = 'All';
   String userId = '';
-  bool isLoading = true;
-  double totalPrice = 0.0; // New state variable for total price
+  TextEditingController searchController = TextEditingController();
+  String searchQuery = '';
+   double totalPrice = 0.0; // New state variable for total price
+    bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchUserId();
+     searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      searchQuery = searchController.text.toLowerCase();
+    });
+  }
+   @override
+  void dispose() {
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUserId() async {
@@ -76,14 +91,15 @@ class _FrozonPageState extends State<FrozonPage> {
           ),
         ],
       ),
-      body: userId.isEmpty
+       body: userId.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
                   child: TextField(
-                    decoration: InputDecoration(
+                    controller: searchController,
+                    decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'What are you looking for',
                       prefixIcon: Icon(Icons.search),
@@ -91,21 +107,39 @@ class _FrozonPageState extends State<FrozonPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        CategoryButton(text: 'All', selected: selectedCategory == 'All', onTap: () => _selectCategory('All')),
-                        CategoryButton(text: 'Ice Cream', selected: selectedCategory == 'Ice Cream', onTap: () => _selectCategory('Ice Cream')),
-                        CategoryButton(text: 'Sausages', selected: selectedCategory == 'Sausages', onTap: () => _selectCategory('Sausages')),
-                        CategoryButton(text: 'Ham', selected: selectedCategory == 'Ham', onTap: () => _selectCategory('Ham')),
-                      ],
-                    ),
-                  ),
-                ),
+  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+  child: SingleChildScrollView(
+    scrollDirection: Axis.horizontal, // Enable horizontal scrolling
+    child: Row(
+      children: [
+        CategoryButton(
+          text: 'All',
+          selected: selectedCategory == 'All',
+          onTap: () => _selectCategory('All'),
+        ),
+        CategoryButton(
+          text: 'Ice Cream',
+          selected: selectedCategory == 'Ice Cream',
+          onTap: () => _selectCategory('Ice Cream'),
+        ),
+        CategoryButton(
+          text: 'Sausages',
+          selected: selectedCategory == 'Sausages',
+          onTap: () => _selectCategory('Sausages'),
+        ),
+        CategoryButton(
+          text: 'Ham',
+          selected: selectedCategory == 'Ham',
+          onTap: () => _selectCategory('Ham'),
+        ),
+       
+      ],
+    ),
+  ),
+),
+
                 Expanded(
-                  child: StreamBuilder(
+                  child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance.collection('frozenfoods').snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
@@ -114,10 +148,11 @@ class _FrozonPageState extends State<FrozonPage> {
 
                       var products = snapshot.data!.docs;
                       var filteredProducts = products.where((product) {
-                        if (selectedCategory == 'All') {
-                          return true;
-                        }
-                        return product['productCategory'] == selectedCategory;
+                        var productName = product['productName'].toString().toLowerCase();
+                        var matchesCategory = selectedCategory == 'All' || product['subCategory'] == selectedCategory;
+                        var matchesSearch = productName.contains(searchQuery);
+
+                        return matchesCategory && matchesSearch;
                       }).toList();
 
                       return ListView.builder(
@@ -134,14 +169,13 @@ class _FrozonPageState extends State<FrozonPage> {
                               );
                             },
                             child: ProductItem(
-                              imageUrl: product['productImage'],
-                              name: product['productName'],
-                              price: 'Rs ${product['finalPrice']}',
-                              company: product['company'] ?? 'Unknown',
-                              stockCount: product['inStockMonth']['totalStock'] ?? 0,
+                              imageUrl: product['productImage'] ?? '',
+                              name: product['productName'] ?? 'Unknown',
+                              price: 'Rs ${product['finalPrice'] ?? '0.00' }',
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
+                              outOfStock: product['inStockMonth']['totalStock'] == 0, // Add this line
                             ),
                           );
                         },
@@ -160,7 +194,7 @@ class _FrozonPageState extends State<FrozonPage> {
     });
   }
 
-  Future<void> addToCart(Map<String, dynamic> product) async {
+Future<void> addToCart(Map<String, dynamic> product) async {
     var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
 
     var cartSnapshot = await cartDocRef.get();
@@ -194,7 +228,7 @@ class _FrozonPageState extends State<FrozonPage> {
 
     if (!itemExists) {
       cartItems.add({
-        'category': product['productCategory'],
+        'quantityType': product['quantityType'],
         'name': product['productName'],
         'price': productPrice,
         'quantity': 1,
@@ -207,22 +241,23 @@ class _FrozonPageState extends State<FrozonPage> {
       'totalPrice': totalPrice,
     }, SetOptions(merge: true));
 
-    // Update stock for the current month without creating a new field
+    // Update the total stock count in the beverages collection
     await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
       'inStockMonth.totalStock': FieldValue.increment(-1),
     });
 
-    // Update the displayed total price
     _fetchTotalPrice(); // Fetch total price after adding
   }
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
-    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+  var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
 
+  try {
     var cartSnapshot = await cartDocRef.get();
     List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
-
     double totalPrice = 0.0;
+
+    // Ensure totalPrice is extracted correctly
     var totalPriceData = cartSnapshot.data()?['totalPrice'];
     if (totalPriceData is String) {
       totalPrice = double.tryParse(totalPriceData) ?? 0.0;
@@ -238,33 +273,48 @@ class _FrozonPageState extends State<FrozonPage> {
       productPrice = finalPrice.toDouble();
     }
 
+    bool itemFound = false;
+
     for (var item in cartItems) {
       if (item['name'] == product['productName']) {
+        itemFound = true;
+
+        // Decrease quantity if greater than 1, otherwise remove item
         if (item['quantity'] > 1) {
           item['quantity']--;
-          totalPrice -= productPrice;
+          totalPrice -= productPrice; // Subtract price for each quantity
         } else {
-          totalPrice -= productPrice;
-          cartItems.remove(item);
+          totalPrice -= productPrice; // Subtract price for removal
+          cartItems.remove(item); // Remove item from cart
         }
-        break;
+        break; // Exit loop after modifying the item
       }
     }
 
+    if (!itemFound) {
+      print('Item not found in cart.');
+      return; // If item is not found, exit the function
+    }
+
+    // Update cart document with modified items and totalPrice
     await cartDocRef.set({
       'items': cartItems,
       'totalPrice': totalPrice,
     }, SetOptions(merge: true));
 
-    // Update stock for the current month without creating a new field
+    // Update the total stock count in the beverages collection
     await FirebaseFirestore.instance.collection('frozenfoods').doc(product['id']).update({
       'inStockMonth.totalStock': FieldValue.increment(1),
     });
 
-    // Update the displayed total price
-    _fetchTotalPrice(); // Fetch total price after removing
+  } catch (e) {
+    print("Error removing from cart: $e");
   }
 }
+
+}
+
+
 
 class CategoryButton extends StatelessWidget {
   final String text;
@@ -280,44 +330,38 @@ class CategoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: selected ? Colors.white : Colors.black,
-          backgroundColor: selected ? Colors.green : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            side: const BorderSide(color: Colors.green),
-          ),
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: selected ? Colors.white : Colors.black,
+        backgroundColor: selected ? Colors.green : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+          side: const BorderSide(color: Colors.green),
         ),
-        onPressed: onTap,
-        child: Text(text),
       ),
+      onPressed: onTap,
+      child: Text(text),
     );
   }
 }
-
 class ProductItem extends StatelessWidget {
   final String imageUrl;
   final String name;
   final String price;
-  final String company;
-  final int stockCount;
   final Map<String, dynamic> product;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final bool outOfStock;
 
   const ProductItem({
     super.key,
     required this.imageUrl,
     required this.name,
     required this.price,
-    required this.company,
-    required this.stockCount,
     required this.product,
     required this.onAdd,
     required this.onRemove,
+    required this.outOfStock,  // Added outOfStock parameter
   });
 
   @override
@@ -326,32 +370,45 @@ class ProductItem extends StatelessWidget {
       elevation: 5,
       margin: const EdgeInsets.all(8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
+          // Product Image
+          Image.network(
+            imageUrl,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Product Name
                   Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text(company),
+                  // Product Price
                   Text(price, style: const TextStyle(color: Colors.green)),
-                  Text('Stock: $stockCount', style: const TextStyle(color: Colors.red)),
+                  // Product Quantity Type (e.g., kg, liters)
+                  Text(product['quantityType'] ?? 'Unknown'), // Display quantityType or Unknown
+                  // Out of Stock label
+                  if (outOfStock)
+                    const Text('Out of Stock', style: TextStyle(color: Colors.red)),
                 ],
               ),
             ),
           ),
+          // Add and Remove buttons
           Column(
             children: [
+              // Add button
               IconButton(
                 icon: const Icon(Icons.add),
-                onPressed: stockCount > 0 ? onAdd : null,
+                onPressed: outOfStock ? null : onAdd,  // Disable if out of stock
               ),
+              // Remove button
               IconButton(
                 icon: const Icon(Icons.remove),
-                onPressed: stockCount > 0 ? onRemove : null,
+                onPressed: outOfStock ? null : onRemove,  // Disable if out of stock
               ),
             ],
           ),
@@ -360,6 +417,7 @@ class ProductItem extends StatelessWidget {
     );
   }
 }
+
 
 class ProductDetailPage extends StatelessWidget {
   final Map<String, dynamic> product;
@@ -370,23 +428,21 @@ class ProductDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(product['productName']),
+        title: Text(product['productName'] ?? 'Product Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.network(product['productImage']),
+            Image.network(product['productImage'] ?? ''),
             const SizedBox(height: 16.0),
             Text(
-              'Price: Rs ${product['finalPrice']}',
-              style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+              'Price: Rs ${product['finalPrice'] ?? '0.00'}',
+              style: const TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8.0),
-            Text('Company: ${product['company'] ?? 'Unknown'}'),
-            const SizedBox(height: 8.0),
-            Text('Stock: ${product['inStockMonth']['totalStock'] ?? 0}'),
+            Text(product['quantityType'] ?? 'Unknown'),  // Show value only
             const SizedBox(height: 8.0),
             ElevatedButton(
               onPressed: () {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'notification.dart';
 import 'homescreen.dart';
 import 'category.dart';
 import 'profile_information.dart';
@@ -13,8 +14,20 @@ class SettingsPage extends StatefulWidget {
   _SettingsPageState createState() => _SettingsPageState();
 }
 
+ Future<String> getCurrentUserId() async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('current_user')
+      .limit(1)
+      .get();
+
+  if (snapshot.docs.isNotEmpty) {
+    return snapshot.docs.first['userId'];
+  } else {
+    throw Exception("No current user found.");
+  }
+}
 class _SettingsPageState extends State<SettingsPage> {
-  int _selectedIndex = 3; // Initialize the selected index to Settings
+  int _selectedIndex = 2; // Default selected index for Settings
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -23,88 +36,91 @@ class _SettingsPageState extends State<SettingsPage> {
       _selectedIndex = index;
     });
 
-    // Navigate to the corresponding page based on the index
-    if (index == 0) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-    } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => CategoryPage()),
-      );
+    // Handle navigation based on index
+    switch (index) {
+      case 0:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+        break;
+      case 1:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const CategoryPage()),
+        );
+        break;
+      case 2:
+        break; // Stay on the current page (Settings)
+      case 3:
+        getCurrentUserId().then((userId) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NotificationScreen(currentUserId: userId),
+            ),
+          );
+        }).catchError((error) {
+          // Handle errors (e.g., show a message or log)
+          print("Error fetching currentUserId: $error");
+        });
+        break;
     }
   }
 
-  // Method to delete the account from Firestore and Firebase Authentication
   Future<void> _deleteAccount() async {
-  try {
-    User? currentUser = _auth.currentUser;
+    try {
+      User? currentUser = _auth.currentUser;
 
-    if (currentUser != null) {
-      // Fetch userId from the 'current_user/current' document
-      DocumentSnapshot currentUserDoc = await _firestore
-          .collection('current_user')
-          .doc('current')
-          .get();
+      if (currentUser != null) {
+        DocumentSnapshot currentUserDoc = await _firestore
+            .collection('current_user')
+            .doc('current')
+            .get();
 
-      if (currentUserDoc.exists) {
-        // Cast the data to Map<String, dynamic>
-        final data = currentUserDoc.data() as Map<String, dynamic>?;
-        final userId = data?['userId'] ?? '';
+        if (currentUserDoc.exists) {
+          final data = currentUserDoc.data() as Map<String, dynamic>?;
+          final userId = data?['userId'] ?? '';
 
-        if (userId.isNotEmpty) {
-          
+          if (userId.isNotEmpty) {
+            await _firestore.collection('users').doc(userId).delete();
+            await currentUser.delete();
 
-          // Delete user document from 'users' collection
-          await _firestore.collection('users').doc(userId).delete();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Account deleted successfully.')),
+            );
 
-          // Delete the user from Firebase Authentication
-          await currentUser.delete();
-
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Account deleted successfully.')),
-          );
-
-          // Navigate to main.dart (clears the navigation stack)
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const GreenMarketScreen()),
-            (route) => false,
-          );
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const GreenMarketScreen()),
+              (route) => false,
+            );
+          } else {
+            _showError('User ID not found.');
+          }
         } else {
-          // Handle case where userId is not found
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User ID not found in Firestore.')),
-          );
+          _showError('No current user document found.');
         }
-      } else {
-        // Handle case where 'current_user/current' does not exist
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No current user document found in Firestore.')),
-        );
       }
+    } catch (e) {
+      _showError('Failed to delete account: $e');
     }
-  } catch (e) {
-    // Handle errors (e.g., re-authentication required for account deletion)
+  }
+
+  void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to delete account: $e')),
+      SnackBar(content: Text(message)),
     );
   }
-}
 
-
-  // Show confirmation dialog
   Future<void> _showConfirmationDialog({
     required String title,
     required String content,
     required VoidCallback onConfirm,
   }) async {
-    return showDialog<void>(
+    showDialog<void>(
       context: context,
-      barrierDismissible: false, // Prevent dismissal by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
@@ -112,15 +128,13 @@ class _SettingsPageState extends State<SettingsPage> {
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
               child: const Text('Confirm', style: TextStyle(color: Colors.red)),
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                onConfirm(); // Execute the confirmation action
+                Navigator.of(context).pop();
+                onConfirm();
               },
             ),
           ],
@@ -129,19 +143,17 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // Confirm logout
   void _confirmLogout() {
     _showConfirmationDialog(
       title: 'Logout',
       content: 'Are you sure you want to log out?',
       onConfirm: () {
-        _auth.signOut(); // Sign out the user
+        _auth.signOut();
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       },
     );
   }
 
-  // Confirm account deletion
   void _confirmDeleteAccount() {
     _showConfirmationDialog(
       title: 'Delete Account',
@@ -153,13 +165,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Change background color to white
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Account Settings'),
-        backgroundColor: const Color(0xFF66BB6A), // Keep the green color for the AppBar
+        backgroundColor: const Color(0xFF66BB6A),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white), // White back arrow
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -168,14 +180,16 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 8), // Adjusted spacing
-            const Text('Update your account settings.'),
+            const Text(
+              'Update your account settings.',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.person_outline, color: Colors.grey), // Outlined person icon
-              title: const Text('Profile Information', style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Change your account details', style: TextStyle(color: Colors.grey)),
-              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey), // Arrow in grey
+              leading: const Icon(Icons.person_outline, color: Colors.grey),
+              title: const Text('Profile Information'),
+              subtitle: const Text('Change your account details'),
+              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
               onTap: () {
                 Navigator.push(
                   context,
@@ -185,19 +199,19 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.grey), // Outlined delete icon
-              title: const Text('Delete Account', style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Delete your account from the app', style: TextStyle(color: Colors.grey)),
-              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey), // Arrow in grey
-              onTap: _confirmDeleteAccount, // Call the confirm delete account dialog
+              leading: const Icon(Icons.delete_outline, color: Colors.grey),
+              title: const Text('Delete Account'),
+              subtitle: const Text('Delete your account from the app'),
+              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+              onTap: _confirmDeleteAccount,
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.grey), // Standard logout icon
-              title: const Text('Logout', style: TextStyle(color: Colors.black)),
-              subtitle: const Text('Log out of the App', style: TextStyle(color: Colors.grey)),
-              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey), // Arrow in grey
-              onTap: _confirmLogout, // Call the confirm logout dialog
+              leading: const Icon(Icons.logout, color: Colors.grey),
+              title: const Text('Logout'),
+              subtitle: const Text('Log out of the App'),
+              trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+              onTap: _confirmLogout,
             ),
           ],
         ),
@@ -210,7 +224,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-// Reuse the BottomNavBar from the previous code
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -225,26 +238,10 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Orders',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.category),
-          label: 'Categories',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.notifications),
-          label: 'Notification',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Categories'),
+        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+        BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notification'),
       ],
       currentIndex: selectedIndex,
       selectedItemColor: Colors.green,

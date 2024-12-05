@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
-import 'package:flutter/services.dart'; // Needed for input formatters
+import 'package:flutter/services.dart';
 import 'Fresco_Registration.dart';
 
 class ProfileInformationPage extends StatefulWidget {
@@ -44,20 +44,16 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
     });
 
     try {
-      QuerySnapshot currentUserSnapshot = await _firestore
-          .collection('current_user')
-          .get();
+      QuerySnapshot currentUserSnapshot = await _firestore.collection('current_user').get();
 
       if (currentUserSnapshot.docs.isNotEmpty) {
         DocumentSnapshot currentUserDoc = currentUserSnapshot.docs.first;
         var currentUserData = currentUserDoc.data() as Map<String, dynamic>?;
+
         String? userId = currentUserData?['userId'];
 
         if (userId != null) {
-          DocumentSnapshot userDoc = await _firestore
-              .collection('users')
-              .doc(userId)
-              .get();
+          DocumentSnapshot userDoc = await _firestore.collection('users').doc(userId).get();
 
           if (userDoc.exists) {
             var userData = userDoc.data() as Map<String, dynamic>?;
@@ -66,11 +62,9 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
               String fullName = userData['name'] ?? '';
               List<String> nameParts = fullName.split(' ');
 
-              String firstName = nameParts.isNotEmpty ? nameParts.first : '';
-              String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
-              _firstNameController.text = firstName;
-              _lastNameController.text = lastName;
+              _firstNameController.text = nameParts.isNotEmpty ? nameParts.first : '';
+              _lastNameController.text =
+                  nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
               _emailController.text = userData['email'] ?? '';
               _phoneController.text = userData['phone'] ?? '';
               _nicController.text = userData['nic'] ?? '';
@@ -147,7 +141,6 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
     }
 
     if (!_formKey.currentState!.validate()) {
-      // Don't proceed if the form is not valid
       return;
     }
 
@@ -230,7 +223,7 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
                       const SizedBox(height: 20),
                       _buildNicField(),
                       const SizedBox(height: 20),
-                      _buildProfileItem('Address', _addressController),
+                      _buildAddressField(),
                       const SizedBox(height: 20),
                       _buildMembershipItem(),
                       const SizedBox(height: 40),
@@ -248,25 +241,16 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
           inputFormatters: isPhone
-              ? [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(10),
-                ]
+              ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)]
               : [],
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
           validator: isPhone
               ? (value) {
                   if (value == null || value.isEmpty) {
@@ -283,74 +267,84 @@ class _ProfileInformationPageState extends State<ProfileInformationPage> {
   }
 
   Widget _buildNicField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'NIC No',
-        style: TextStyle(
-          fontSize: 16,
-          color: Colors.black,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: _nicController,
-        keyboardType: TextInputType.text,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[0-9Vv]')),
-          LengthLimitingTextInputFormatter(12), // Max length of 12 characters
-        ],
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(),
-          hintText: 'New NIC: 12 digits, Old NIC: 9 digits + V/v',
-        ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'NIC cannot be empty';
-          }
-
-          // Regular expression for NIC: 12 digits or 9 digits + 'V' or 'v'
-          RegExp nicRegExp = RegExp(r'^(\d{12}|\d{9}[Vv])$');
-          
-          if (!nicRegExp.hasMatch(value)) {
-            return 'Invalid NIC format';
-          }
-
-          return null;
-        },
-      ),
-    ],
-  );
-}
-
-
-  Widget _buildMembershipItem() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Membership',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          'NIC No',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
-          onTap: _navigateToFrescoRegistration,
-          child: Text(
-            _membershipStatus,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.blue,
-              decoration: TextDecoration.underline,
-            ),
-          ),
+        TextFormField(
+          controller: _nicController,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9Vv]')),
+            LengthLimitingTextInputFormatter(12),
+          ],
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your NIC';
+            } else if (!RegExp(r'^\d{12}$|^\d{9}[Vv]$').hasMatch(value)) {
+              return 'Enter a valid NIC (12 digits or 9 digits + V)';
+            }
+            return null;
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildAddressField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Address',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _addressController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Enter only addresses around Kurunegala',
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Address cannot be empty';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMembershipItem() {
+    return GestureDetector(
+      onTap: _navigateToFrescoRegistration,
+      child: Row(
+        children: [
+          const Text(
+            'Membership:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            _membershipStatus,
+            style: const TextStyle(fontSize: 16),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: _navigateToFrescoRegistration,
+            child: const Text(
+              'Fresco Registration',
+              style: TextStyle(color: Colors.green),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -24,93 +24,131 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   // Email and Password Login
-  Future<void> _loginWithEmail() async {
-    setState(() {
-      _isLoading = true;
-    });
+ Future<void> _loginWithEmail() async {
+  setState(() {
+    _isLoading = true;
+  });
 
-    try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
+  try {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+    UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${e.toString()}')),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
+    // Check for userId in users collection
+    QuerySnapshot userSnapshot = await _firestore
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .get();
+
+    if (userSnapshot.docs.isNotEmpty) {
+      final userId = userSnapshot.docs.first['userId'];
+
+      // Update current_user collection
+      await _firestore.collection('current_user').doc('current').set({
+        'email': email,
+        'userId': userId,
       });
+    } else {
+      throw Exception('No user found with this email.');
     }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Login failed: ${e.toString()}')),
+    );
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+
 
   // Google Sign-In Login
   Future<void> _loginWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
+  setState(() {
+    _isLoading = true;
+  });
 
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+  try {
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
-      if (googleUser == null) {
-        // User cancelled sign-in
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-
-      // Add user to Firestore if not already present
-      User? user = userCredential.user;
-      if (user != null) {
-        DocumentSnapshot userDoc =
-            await _firestore.collection('users').doc(user.uid).get();
-
-        if (!userDoc.exists) {
-          await _firestore.collection('users').doc(user.uid).set({
-            'userId': user.uid,
-            'email': user.email,
-            'name': user.displayName,
-            'photoUrl': user.photoURL,
-          });
-        }
-      }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
-      );
-    } finally {
+    if (googleUser == null) {
+      // User cancelled sign-in
       setState(() {
         _isLoading = false;
       });
+      return;
     }
+
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    final AuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    UserCredential userCredential =
+        await _auth.signInWithCredential(credential);
+
+    User? user = userCredential.user;
+
+    if (user != null) {
+      // Check for userId in users collection
+      QuerySnapshot userSnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: user.email)
+          .get();
+
+      if (userSnapshot.docs.isNotEmpty) {
+        final userId = userSnapshot.docs.first['userId'];
+
+        // Update current_user collection
+        await _firestore.collection('current_user').doc('current').set({
+          'email': user.email,
+          'userId': userId,
+        });
+      } else {
+        // Add user to users collection if not present
+        await _firestore.collection('users').doc(user.uid).set({
+          'userId': user.uid,
+          'email': user.email,
+          'name': user.displayName,
+          'photoUrl': user.photoURL,
+        });
+
+        // Update current_user collection
+        await _firestore.collection('current_user').doc('current').set({
+          'email': user.email,
+          'userId': user.uid,
+        });
+      }
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Google Sign-In failed: ${e.toString()}')),
+    );
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

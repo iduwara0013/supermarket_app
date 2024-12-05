@@ -15,6 +15,7 @@ import 'snacks.dart';
 import 'HealthWellness.dart';
 import 'BakeryProducts.dart';
 import 'Meats_Seafood.dart';
+import 'notification.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+       debugShowCheckedModeBanner: false, // Disable the debug banner
       theme: ThemeData(
         colorScheme: ColorScheme.light(
     secondary: Colors.green, // New way
@@ -42,6 +44,7 @@ class HomeScreen extends StatefulWidget {
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
+  
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -52,6 +55,10 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _greenMartDeals = [];
   List<Map<String, dynamic>> _bestSellers = [];
   List<Map<String, dynamic>> _frescoDeals = [];
+  List<Map<String, dynamic>> _allItems = [];
+  List<Map<String, dynamic>> _filteredItems = [];
+  
+  
 
   @override
   void initState() {
@@ -59,6 +66,63 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchPromotions();
     _autoScrollImages();
     _fetchDeals();
+    fetchAllItems().then((items) {
+      setState(() {
+        _allItems = items;
+        _filteredItems = items; // Initially show all items
+      });
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAllItems() async {
+    final collections = [
+      'beverages',
+      'dairy&eggs',
+      'frozenfoods',
+      'grocery',
+      'health&wellness',
+      'meats&seafoods',
+      'snacks',
+    ];
+
+    List<Map<String, dynamic>> allItems = [];
+
+    for (var collection in collections) {
+      var snapshot = await FirebaseFirestore.instance.collection(collection).get();
+      for (var doc in snapshot.docs) {
+        allItems.add({
+          'id': doc.id,
+          'name': doc['productName'], // Adjust field name
+          'collection': collection,
+          ...doc.data(), // Add other fields if needed
+        });
+      }
+    }
+
+    return allItems;
+  }
+
+  void _filterItems(String query) {
+    setState(() {
+      _filteredItems = _allItems
+          .where((item) =>
+              item['name'].toString().toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void _navigateToItem(String collection, String itemId) {
+    switch (collection) {
+      case 'beverages':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => BeveragesScreen()));
+        break;
+      case 'snacks':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => SnacksPage()));
+        break;
+      // Add other cases for different collections
+      default:
+        break;
+    }
   }
 
   // Fetch image URLs from Firebase Firestore
@@ -143,6 +207,19 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
   }
+  Future<String> getCurrentUserId() async {
+  final snapshot = await FirebaseFirestore.instance
+      .collection('current_user')
+      .limit(1)
+      .get();
+
+  if (snapshot.docs.isNotEmpty) {
+    return snapshot.docs.first['userId'];
+  } else {
+    throw Exception("No current user found.");
+  }
+}
+
 
   void _onItemTapped(int index) {
     setState(() {
@@ -156,33 +233,33 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
         break;
-      case 1: // Search
-        // Implement search page navigation
-        
-        break;
-      case 2: // Categories
+      case 1: // Categories
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const CategoryPage()),
         );
         break;
-      case 3: // Settings
+      case 2: // Settings
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SettingsPage()),
         );
         break;
-      case 4: // Profile
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ProfileInformationPage()),
-        );
+      case 3: // Profile
+        getCurrentUserId().then((userId) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NotificationScreen(currentUserId: userId),
+      ),
+    );
+  }).catchError((error) {
+    // Handle errors (e.g., show a message or log)
+    print("Error fetching currentUserId: $error");
+  });
         break;
       case 5: // Shopping Cart
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-        );
+         
         break;
       default:
         break;
@@ -249,176 +326,197 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 
+
   @override
-  Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color.fromARGB(255, 58, 104, 16),
-          automaticallyImplyLeading: false,
-          toolbarHeight: 80, // Adjust the height of the AppBar
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-              Image.asset(
-                'assets/logo.png',
-                height: 40,
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ShoppingCartPage()),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.person, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileInformationPage()),
-                  );
-                },
-              ),
-            ],
-          ),
+Widget build(BuildContext context) {
+  return WillPopScope(
+    onWillPop: _onWillPop,
+    child: Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 58, 104, 16),
+        automaticallyImplyLeading: false,
+        toolbarHeight: 80, // Adjust the height of the AppBar
+        title: Row(
+          children: [
+           //IconButton(
+            //  icon: const Icon(Icons.menu, color: Colors.white),
+             // onPressed: () {},
+          //  ),
+            const SizedBox(width: 8),
+            Image.asset(
+              'assets/logo.png',
+              height: 40,
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ShoppingCartPage()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.person, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfileInformationPage()),
+                );
+              },
+            ),
+          ],
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'What are you looking for?',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: BorderSide(
-                              color: Colors.green.withOpacity(0.3),
-                              width: 1.5,
-                            ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (query) {
+                        _filterItems(query); // Filter items as the user types
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'What are you looking for?',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(
+                            color: Colors.green.withOpacity(0.3),
+                            width: 1.5,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: 16),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
               ),
-              // Image carousel with auto-scroll and dots indicator
-              SizedBox(
-                height: 190,
-                width: 400,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(35.0), // Adjust the radius for curve effect
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Stack(
-                      children: [
-                        PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentPage = index;
-                            });
-                            _autoScrollImages();
-                          },
-                          itemCount: _imageUrls.length,
-                          itemBuilder: (context, index) {
-                            return Image.network(
-                              _imageUrls[index], // Fetch the image from Firestore
-                              fit: BoxFit.cover,
-                              width: MediaQuery.of(context).size.width,
-                            );
-                          },
-                        ),
-                        Positioned(
-                          bottom: 10,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: DotsIndicator(
-                              dotsCount: _imageUrls.length,
-                              position: _currentPage.toInt(),
-                              decorator: DotsDecorator(
-                                activeColor: Colors.green,
-                                size: const Size.square(9.0),
-                                activeSize: const Size(18.0, 9.0),
-                                activeShape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(5.0),
-                                ),
+            ),
+            // Display filtered items or message if empty
+            _filteredItems.isEmpty
+                ? Center(child: Text('No items found'))
+                : ListView.builder(
+                shrinkWrap: true, // Ensure the ListView takes only the space it needs
+                physics: NeverScrollableScrollPhysics(), // Disable scrolling to avoid conflict with SingleChildScrollView
+                itemCount: _filteredItems.length,
+                itemBuilder: (context, index) {
+                  final item = _filteredItems[index];
+                  return ListTile(
+                    title: Text(item['name']),
+                    subtitle: Text(item['collection']),
+                    onTap: () => _navigateToItem(item['collection'], item['id']),
+                  );
+                },
+              ),
+            // Image carousel with auto-scroll and dots indicator
+            SizedBox(
+              height: 190,
+              width: 400,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(35.0), // Adjust the radius for curve effect
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Stack(
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentPage = index;
+                          });
+                          _autoScrollImages();
+                        },
+                        itemCount: _imageUrls.length,
+                        itemBuilder: (context, index) {
+                          return Image.network(
+                            _imageUrls[index], // Fetch the image from Firestore
+                            fit: BoxFit.cover,
+                            width: MediaQuery.of(context).size.width,
+                          );
+                        },
+                      ),
+                      
+                      Positioned(
+                        bottom: 10,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: DotsIndicator(
+                            dotsCount: _imageUrls.length,
+                            position: _currentPage.toInt(),
+                            decorator: DotsDecorator(
+                              activeColor: Colors.green,
+                              size: const Size.square(9.0),
+                              activeSize: const Size(18.0, 9.0),
+                              activeShape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(5.0),
                               ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              // Categories Section
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'CATEGORIES',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromRGBO(93, 95, 90, 1),
-                    ),
+            ),
+            
+            // Categories Section
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'CATEGORIES',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromRGBO(93, 95, 90, 1),
                   ),
                 ),
               ),
-              // Horizontal list of categories
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    CategoryCard('Grocery', 'assets/grocery1.png', GroceryPage()),
-                    CategoryCard('Frozen Foods', 'assets/frozen1.png', FrozonPage()),
-                    CategoryCard('Beverage', 'assets/beverages1.png', BeveragesScreen()),
-                    CategoryCard('Snacks', 'assets/snacks1.jpg', SnacksPage()),
-                    CategoryCard('Meats & Seafood', 'assets/meats1.webp', MeatsSeafoodPage()),
-                    CategoryCard('Health & Wellness', 'assets/health1.png', HealthPage()),
-                    CategoryCard('Bakery Products', 'assets/bakery1.png', BakeryProductsPage()),
-                    CategoryCard('Dairy & Eggs', 'assets/dairy1.png', DairyPage()),
-                  ],
-                ),
+            ),
+            // Horizontal list of categories
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  CategoryCard('Grocery', 'assets/grocery1.png', GroceryPage(), width: 100, height: 120),
+                  CategoryCard('Frozen Foods', 'assets/frozen1.png', FrozonPage(), width: 100, height: 120),
+                  CategoryCard('Beverage', 'assets/beverages1.png', BeveragesScreen(), width: 100, height: 120),
+                  CategoryCard('Snacks', 'assets/snacks1.jpg', SnacksPage(), width: 100, height: 120),
+                  CategoryCard('Meats & Seafood', 'assets/meats1.webp', MeatsSeafoodPage(), width: 100, height: 120),
+                  CategoryCard('Health&Wellness', 'assets/health1.png', HealthPage(), width: 100, height: 110),
+                  CategoryCard('Bakery Products', 'assets/bakery1.png', BakeryProductsPage(), width: 100, height: 120),
+                  CategoryCard('Dairy & Eggs', 'assets/dairy1.png', DairyPage(), width: 100, height: 120),
+                ],
               ),
-              // Sections like GreenMart Deals, Best Sellers, and Fresco Deals
-              // Section display logic
-...[
+            ),
+            // Other sections (Deals, Best Sellers, etc.)
+            ...[
               {
                 'title': 'GreenMart Deals',
                 'products': _greenMartDeals,
                 'sectionType': 'greenMartDeals',
               },
-              {
+             /* {
                 'title': 'Best Sellers',
                 'products': _bestSellers,
                 'sectionType': 'bestSellers',
-              },
-              {
+              },*/
+             /* {
                 'title': 'Fresco Deals',
                 'products': _frescoDeals,
                 'sectionType': 'frescoDeals',
-              },
+              },*/
             ].map((section) {
               return Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -444,13 +542,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             product.containsKey('discount') ? product['discount'] : null,
                           );
                         }).toList(),
+                        
                       ),
                     ),
                   ],
                 ),
               );
             }).toList(),
-              Container(
+            Container(
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
@@ -509,33 +608,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
-
-            ],
-            
-          ),
+          ],
         ),
-        bottomNavigationBar: BottomNavBar(
+      ),
+      bottomNavigationBar: BottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
+    ),
+  );
+}
 
-      ),
-    );
-  }
 }
 
 class CategoryCard extends StatelessWidget {
-  final String categoryName;
+  final String title;
   final String imagePath;
   final Widget page;
+  final double width;
+  final double height;
 
-  const CategoryCard(
-    this.categoryName,
-    this.imagePath,
-    this.page, {
-    Key? key,
-  }) : super(key: key);
+  const CategoryCard(this.title, this.imagePath, this.page,
+      {this.width = 120, this.height = 140, Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -546,26 +641,18 @@ class CategoryCard extends StatelessWidget {
           MaterialPageRoute(builder: (context) => page),
         );
       },
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        width: width,
+        height: height,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imagePath,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(categoryName),
+            Image.asset(imagePath, width: width, height: height * 0.7, fit: BoxFit.cover),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 12),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -573,6 +660,7 @@ class CategoryCard extends StatelessWidget {
     );
   }
 }
+
 
 class SectionItemCard extends StatelessWidget {
   final String productName;
@@ -635,11 +723,7 @@ class BottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Orders',
-        ),
+        ),  
         BottomNavigationBarItem(
           icon: Icon(Icons.category),
           label: 'Categories',
@@ -660,3 +744,84 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 }
+
+class CustomSearchDelegate extends SearchDelegate {
+  final List<Map<String, dynamic>> allItems; // List of all items fetched from Firestore
+  final Function(String, String) navigateToItem; // Navigation function
+
+  CustomSearchDelegate({required this.allItems, required this.navigateToItem});
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: Icon(Icons.clear),
+        onPressed: () {
+          query = ''; // Clear the search query
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null); // Close the search screen
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildFilteredList(); // Show filtered results
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    // If the query is empty, do not show the list
+    if (query.isEmpty) {
+      return Center(
+        child: Text(
+          'Type at least one letter to search.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    // Show filtered suggestions when query is not empty
+    return _buildFilteredList();
+  }
+
+  Widget _buildFilteredList() {
+    // Filter results based on the query
+    final results = allItems
+        .where((item) =>
+            item['name'].toString().toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    if (results.isEmpty) {
+      return Center(
+        child: Text(
+          'No results found.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final item = results[index];
+        return ListTile(
+          title: Text(item['name']),
+          subtitle: Text(item['collection']),
+          onTap: () => navigateToItem(item['collection'], item['id']),
+        );
+      },
+    );
+  }
+}
+
+

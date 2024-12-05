@@ -155,6 +155,7 @@ class _BeveragesScreenState extends State<BeveragesScreen> {
                               product: product,
                               onAdd: () => addToCart(product),
                               onRemove: () => removeFromCart(product),
+                              outOfStock: product['inStockMonth']['totalStock'] == 0, // Add this line
                             ),
                           );
                         },
@@ -207,7 +208,7 @@ Future<void> addToCart(Map<String, dynamic> product) async {
 
     if (!itemExists) {
       cartItems.add({
-        'category': product['productCategory'],
+        'quantityType': product['quantityType'],
         'name': product['productName'],
         'price': productPrice,
         'quantity': 1,
@@ -323,7 +324,6 @@ class CategoryButton extends StatelessWidget {
     );
   }
 }
-
 class ProductItem extends StatelessWidget {
   final String imageUrl;
   final String name;
@@ -331,6 +331,7 @@ class ProductItem extends StatelessWidget {
   final Map<String, dynamic> product;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final bool outOfStock;
 
   const ProductItem({
     super.key,
@@ -340,6 +341,7 @@ class ProductItem extends StatelessWidget {
     required this.product,
     required this.onAdd,
     required this.onRemove,
+    required this.outOfStock,  // Added outOfStock parameter
   });
 
   @override
@@ -349,29 +351,44 @@ class ProductItem extends StatelessWidget {
       margin: const EdgeInsets.all(8),
       child: Row(
         children: [
-          Image.network(imageUrl, width: 100, height: 100, fit: BoxFit.cover),
+          // Product Image
+          Image.network(
+            imageUrl,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Product Name
                   Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  // Product Price
                   Text(price, style: const TextStyle(color: Colors.green)),
-                  Text(product['quantityType'] ?? 'Unknown'),  // Show value only
+                  // Product Quantity Type (e.g., kg, liters)
+                  Text(product['quantityType'] ?? 'Unknown'), // Display quantityType or Unknown
+                  // Out of Stock label
+                  if (outOfStock)
+                    const Text('Out of Stock', style: TextStyle(color: Colors.red)),
                 ],
               ),
             ),
           ),
+          // Add and Remove buttons
           Column(
             children: [
+              // Add button
               IconButton(
                 icon: const Icon(Icons.add),
-                onPressed: onAdd,
+                onPressed: outOfStock ? null : onAdd,  // Disable if out of stock
               ),
+              // Remove button
               IconButton(
                 icon: const Icon(Icons.remove),
-                onPressed: onRemove,
+                onPressed: outOfStock ? null : onRemove,  // Disable if out of stock
               ),
             ],
           ),
@@ -380,6 +397,7 @@ class ProductItem extends StatelessWidget {
     );
   }
 }
+
 
 class ProductDetailPage extends StatelessWidget {
   final Map<String, dynamic> product;
