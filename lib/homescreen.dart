@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_imageUrls.isNotEmpty) {
         int nextPage = _currentPage + 1;
         if (nextPage == _imageUrls.length) {
-          nextPage = 0;
+          nextPage = 1;
         }
         _pageController.animateToPage(
           nextPage,
@@ -345,7 +345,7 @@ Widget build(BuildContext context) {
             const SizedBox(width: 8),
             Image.asset(
               'assets/logo.png',
-              height: 40,
+              height: 50,
             ),
             const Spacer(),
             IconButton(
@@ -401,7 +401,7 @@ Widget build(BuildContext context) {
               ),
             ),
             // Display filtered items or message if empty
-            _filteredItems.isEmpty
+           /* _filteredItems.isEmpty
                 ? Center(child: Text('No items found'))
                 : ListView.builder(
                 shrinkWrap: true, // Ensure the ListView takes only the space it needs
@@ -415,7 +415,7 @@ Widget build(BuildContext context) {
                     onTap: () => _navigateToItem(item['collection'], item['id']),
                   );
                 },
-              ),
+              ),*/
             // Image carousel with auto-scroll and dots indicator
             SizedBox(
               height: 190,
@@ -489,14 +489,14 @@ Widget build(BuildContext context) {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  CategoryCard('Grocery', 'assets/grocery1.png', GroceryPage(), width: 100, height: 120),
-                  CategoryCard('Frozen Foods', 'assets/frozen1.png', FrozonPage(), width: 100, height: 120),
-                  CategoryCard('Beverage', 'assets/beverages1.png', BeveragesScreen(), width: 100, height: 120),
-                  CategoryCard('Snacks', 'assets/snacks1.jpg', SnacksPage(), width: 100, height: 120),
-                  CategoryCard('Meats & Seafood', 'assets/meats1.webp', MeatsSeafoodPage(), width: 100, height: 120),
+                  CategoryCard('Grocery', 'assets/grocery1.png', GroceryPage(), width: 80, height: 100),
+                  CategoryCard('Frozen Foods', 'assets/frozen1.png', FrozonPage(), width: 80, height: 100),
+                  CategoryCard('Beverage', 'assets/beverages1.png', BeveragesScreen(), width: 80, height: 100),
+                  CategoryCard('Snacks', 'assets/snacks1.jpg', SnacksPage(), width: 80, height: 100),
+                  CategoryCard('Meats & Seafood', 'assets/meats1.webp', MeatsSeafoodPage(),width: 100, height: 110),
                   CategoryCard('Health&Wellness', 'assets/health1.png', HealthPage(), width: 100, height: 110),
-                  CategoryCard('Bakery Products', 'assets/bakery1.png', BakeryProductsPage(), width: 100, height: 120),
-                  CategoryCard('Dairy & Eggs', 'assets/dairy1.png', DairyPage(), width: 100, height: 120),
+                  CategoryCard('Bakery Products', 'assets/bakery1.png', BakeryProductsPage(),width: 100, height: 110),
+                  CategoryCard('Dairy & Eggs', 'assets/dairy1.png', DairyPage(), width: 80, height: 100),
                 ],
               ),
             ),

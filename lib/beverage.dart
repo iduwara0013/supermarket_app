@@ -175,59 +175,62 @@ class _BeveragesScreenState extends State<BeveragesScreen> {
   }
 
 Future<void> addToCart(Map<String, dynamic> product) async {
-    var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
+  var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);
 
-    var cartSnapshot = await cartDocRef.get();
-    List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
+  var cartSnapshot = await cartDocRef.get();
+  List<dynamic> cartItems = List.from(cartSnapshot.data()?['items'] ?? []);
 
-    double totalPrice = 0.0;
-    var totalPriceData = cartSnapshot.data()?['totalPrice'];
-    if (totalPriceData is String) {
-      totalPrice = double.tryParse(totalPriceData) ?? 0.0;
-    } else if (totalPriceData is num) {
-      totalPrice = totalPriceData.toDouble();
-    }
-
-    double productPrice = 0.0;
-    var finalPrice = product['finalPrice'];
-    if (finalPrice is String) {
-      productPrice = double.tryParse(finalPrice) ?? 0.0;
-    } else if (finalPrice is num) {
-      productPrice = finalPrice.toDouble();
-    }
-
-    bool itemExists = false;
-    for (var item in cartItems) {
-      if (item['name'] == product['productName']) {
-        item['quantity']++;
-        totalPrice += productPrice;
-        itemExists = true;
-        break;
-      }
-    }
-
-    if (!itemExists) {
-      cartItems.add({
-        'quantityType': product['quantityType'],
-        'name': product['productName'],
-        'price': productPrice,
-        'quantity': 1,
-      });
-      totalPrice += productPrice;
-    }
-
-    await cartDocRef.set({
-      'items': cartItems,
-      'totalPrice': totalPrice,
-    }, SetOptions(merge: true));
-
-    // Update the total stock count in the beverages collection
-    await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
-      'inStockMonth.totalStock': FieldValue.increment(-1),
-    });
-
-    _fetchTotalPrice(); // Fetch total price after adding
+  double totalPrice = 0.0;
+  var totalPriceData = cartSnapshot.data()?['totalPrice'];
+  if (totalPriceData is String) {
+    totalPrice = double.tryParse(totalPriceData) ?? 0.0;
+  } else if (totalPriceData is num) {
+    totalPrice = totalPriceData.toDouble();
   }
+
+  double productPrice = 0.0;
+  var finalPrice = product['finalPrice'];
+  if (finalPrice is String) {
+    productPrice = double.tryParse(finalPrice) ?? 0.0;
+  } else if (finalPrice is num) {
+    productPrice = finalPrice.toDouble();
+  }
+
+  bool itemExists = false;
+  for (var item in cartItems) {
+    if (item['name'] == product['productName']) {
+      item['quantity']++;
+      totalPrice += productPrice;
+      itemExists = true;
+      break;
+    }
+  }
+
+  if (!itemExists) {
+    cartItems.add({
+      'quantityType': product['quantityType'],
+      'name': product['productName'],
+      'price': productPrice,
+      'quantity': 1,
+    });
+    totalPrice += productPrice;
+  }
+
+  // Add delivery fee of 120 to total price
+  totalPrice += 120;
+
+  await cartDocRef.set({
+    'items': cartItems,
+    'totalPrice': totalPrice,
+  }, SetOptions(merge: true));
+
+  // Update the total stock count in the beverages collection
+  await FirebaseFirestore.instance.collection('beverages').doc(product['id']).update({
+    'inStockMonth.totalStock': FieldValue.increment(-1),
+  });
+
+  _fetchTotalPrice(); // Fetch total price after adding
+}
 
   Future<void> removeFromCart(Map<String, dynamic> product) async {
   var cartDocRef = FirebaseFirestore.instance.collection('cart').doc(userId);

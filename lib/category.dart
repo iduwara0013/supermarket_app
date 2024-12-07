@@ -6,6 +6,13 @@ import 'beverage.dart'; // Import your Beverage screen
 import 'order.dart';
 import 'notification.dart'; // Import NotificationScreen if it exists
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'BakeryProducts.dart';
+import 'HealthWellness.dart';
+import 'Meats_Seafood.dart';
+import 'frozen.dart';
+import 'snacks.dart';
+import 'cleaning.dart';
+import 'dairy.dart';
 
 class CategoryPage extends StatefulWidget {
   const CategoryPage({super.key});
@@ -120,6 +127,48 @@ class _CategoryPageState extends State<CategoryPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => BeveragesScreen()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Dairy & Eggs') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => DairyPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Meats & Seafood') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MeatsSeafoodPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Grocery') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => GroceryPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Bakery Products') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => BakeryProductsPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Snacks') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SnacksPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Health & Wellness') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => HealthPage()),
+                    );
+                  }
+                  if (categories[index]['label'] == 'Frozen Foods') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => FrozonPage()),
                     );
                   }
                 },
